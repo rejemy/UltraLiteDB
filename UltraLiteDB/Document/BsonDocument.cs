@@ -206,7 +206,7 @@ namespace UltraLiteDB
             var stop = Math.Min(thisLength, otherLength);
 
             for (; 0 == result && i < stop; i++)
-                result = this[thisKeys[i]].CompareTo(otherDoc[thisKeys[i]]);
+                result = this[thisKeys[i]].CompareTo(otherDoc[otherKeys[i]]);
 
             // are different
             if (result != 0) return result;

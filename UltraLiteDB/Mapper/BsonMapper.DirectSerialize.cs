@@ -54,6 +54,7 @@ namespace UltraLiteDB
             if (entity is BsonDocument doc)
             {
                 BsonWriter.Serialize(doc);
+                return;
             }
 
             DirectBsonWriter.WriteObjectDirect(writer, this, type, entity, 0);

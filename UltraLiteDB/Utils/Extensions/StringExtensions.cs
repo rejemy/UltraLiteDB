@@ -6,7 +6,7 @@ namespace UltraLiteDB
     {
         public static bool IsNullOrWhiteSpace(this string str)
         {
-            return str == null || str.Trim().Length == 0;
+            return string.IsNullOrWhiteSpace(str);
         }
 
         public static bool IsNullOrEmpty(this string str)

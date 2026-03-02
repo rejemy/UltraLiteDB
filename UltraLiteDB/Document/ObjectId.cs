@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Security;
 using System.Threading;
@@ -280,19 +281,14 @@ namespace UltraLiteDB
 
             try
             {
-                _pid = (short)GetCurrentProcessId();
+                _pid = (short)Process.GetCurrentProcess().Id;
             }
-            catch (SecurityException)
+            catch
             {
-                _pid = 0;
+                _pid = (short)new Random().Next(0, 5000);
             }
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private static int GetCurrentProcessId()
-        {
-            return (new Random()).Next(0, 5000); // Any same number for this process
-        }
 
         private static int GetMachineHash()
         {

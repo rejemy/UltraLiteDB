@@ -16,7 +16,6 @@ namespace UltraLiteDB
 
         private PageService _pager;
         private Logger _log;
-        private Random _rand = new Random();
 
         public IndexService(PageService pager, Logger log)
         {
@@ -330,7 +329,7 @@ namespace UltraLiteDB
         public byte FlipCoin()
         {
             byte level = 1;
-            for (int R = _rand.Next(); (R & 1) == 1; R >>= 1)
+            for (int R = new Random().Next(); (R & 1) == 1; R >>= 1)
             {
                 level++;
                 if (level == IndexNode.MAX_LEVEL_LENGTH) break;

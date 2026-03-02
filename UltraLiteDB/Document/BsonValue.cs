@@ -293,18 +293,18 @@ namespace UltraLiteDB
                     case BsonType.MinValue:
                     case BsonType.MaxValue:
                         return false;
-                    case BsonType.Int32: return this.AsInt32 != 0;
-                    case BsonType.Int64: return this.AsInt64 != 0L;
-                    case BsonType.Double: return this.AsDouble != 0.0;
-                    case BsonType.Decimal: return this.AsDecimal != 0L;
+                    case BsonType.Int32: return this.AsInt32 == default;
+                    case BsonType.Int64: return this.AsInt64 == default;
+                    case BsonType.Double: return this.AsDouble == default;
+                    case BsonType.Decimal: return this.AsDecimal == default;
                     case BsonType.String: return this.AsString.IsNullOrEmpty();
-                    case BsonType.Document: return this.AsDocument.Count > 0;
-                    case BsonType.Array: return this.AsArray.Count > 0;
-                    case BsonType.Binary: return this.AsBinary.Count > 0;
+                    case BsonType.Document: return this.AsDocument.Count == 0;
+                    case BsonType.Array: return this.AsArray.Count == 0;
+                    case BsonType.Binary: return this.AsBinary.Count == 0;
                     case BsonType.ObjectId: return this.AsObjectId == ObjectId.Empty;
-                    case BsonType.Guid: return this.AsGuid == Guid.Empty;
-                    case BsonType.Boolean: return this.AsBoolean == false;
-                    case BsonType.DateTime: return this.AsDateTime == DateTime.MinValue;
+                    case BsonType.Guid: return this.AsGuid == default;
+                    case BsonType.Boolean: return this.AsBoolean == default;
+                    case BsonType.DateTime: return this.AsDateTime == default;
                     default: throw new NotImplementedException();
                 }
             }
@@ -644,7 +644,10 @@ namespace UltraLiteDB
         {
             var hash = 17;
             hash = 37 * hash + this.Type.GetHashCode();
-            hash = 37 * hash + this.RawValue.GetHashCode();
+            if(this.RawValue != null)
+            {
+                hash = 37 * hash + this.RawValue.GetHashCode();
+            }
             return hash;
         }
 
