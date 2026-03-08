@@ -9,8 +9,11 @@ namespace UltraLiteDB
     public partial class BsonMapper
     {
         /// <summary>
-        /// Deserialize a BsonDocument to entity class
+        /// Deserializes a <see cref="BsonDocument"/> into a .NET object of the specified type.
+        /// Returns the document as-is if the target type is <see cref="BsonDocument"/>.
         /// </summary>
+        /// <param name="type">The target CLR type.</param>
+        /// <param name="doc">The BSON document to deserialize.</param>
         public virtual object ToObject(Type type, BsonDocument doc)
         {
             if (doc == null) throw new ArgumentNullException(nameof(doc));
@@ -22,7 +25,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Deserialize a BsonDocument to entity class
+        /// Deserializes a <see cref="BsonDocument"/> into a .NET object of type <typeparamref name="T"/>.
         /// </summary>
         public virtual T ToObject<T>(BsonDocument doc)
         {
@@ -30,7 +33,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Deserialize an BsonValue to .NET object typed in T
+        /// Deserializes a <see cref="BsonValue"/> into a .NET object of type <typeparamref name="T"/>.
         /// </summary>
         internal T Deserialize<T>(BsonValue value)
         {

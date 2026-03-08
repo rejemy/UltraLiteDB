@@ -5,7 +5,8 @@ namespace UltraLiteDB
     public partial class UltraLiteEngine
     {
         /// <summary>
-        /// Get internal information about database. Can filter collections
+        /// Returns a <see cref="BsonDocument"/> with internal database metadata: user version,
+        /// encryption status, file size, and details for each collection (name, page ID, document count, indexes).
         /// </summary>
         public BsonDocument Info()
         {

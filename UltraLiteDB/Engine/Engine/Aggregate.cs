@@ -6,8 +6,11 @@ namespace UltraLiteDB
     public partial class UltraLiteEngine
     {
         /// <summary>
-        /// Returns first value from an index (first is min value)
+        /// Returns the minimum value from the specified index field in the given collection.
         /// </summary>
+        /// <param name="collection">The collection name.</param>
+        /// <param name="field">The indexed field name to retrieve the minimum value from.</param>
+        /// <returns>The minimum <see cref="BsonValue"/> in the index, or <see cref="BsonValue.MinValue"/> if the collection or index does not exist.</returns>
         public BsonValue Min(string collection, string field)
         {
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));
@@ -32,8 +35,11 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns last value from an index (last is max value)
+        /// Returns the maximum value from the specified index field in the given collection.
         /// </summary>
+        /// <param name="collection">The collection name.</param>
+        /// <param name="field">The indexed field name to retrieve the maximum value from.</param>
+        /// <returns>The maximum <see cref="BsonValue"/> in the index, or <see cref="BsonValue.MaxValue"/> if the collection or index does not exist.</returns>
         public BsonValue Max(string collection, string field)
         {
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));
@@ -58,8 +64,12 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Count all nodes from a query execution - do not deserialize documents to count. If query is null, use Collection counter variable
+        /// Counts documents matching a query without fully deserializing them (unless the query requires filtering).
+        /// If <paramref name="query"/> is <c>null</c>, returns the collection's stored document count.
         /// </summary>
+        /// <param name="collection">The collection name.</param>
+        /// <param name="query">Optional query to filter documents. If <c>null</c>, returns total document count.</param>
+        /// <returns>The number of matching documents, or 0 if the collection does not exist.</returns>
         public long Count(string collection, Query query = null)
         {
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));
@@ -93,8 +103,12 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Check if has at least one node in a query execution - do not deserialize documents to check
+        /// Checks whether at least one document matching the query exists in the collection.
+        /// Avoids full deserialization when an index is used without filtering.
         /// </summary>
+        /// <param name="collection">The collection name.</param>
+        /// <param name="query">The query to evaluate.</param>
+        /// <returns><c>true</c> if at least one matching document exists; otherwise <c>false</c>.</returns>
         public bool Exists(string collection, Query query)
         {
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));

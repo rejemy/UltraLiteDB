@@ -3,7 +3,8 @@
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Add an index in this entity property.
+    /// Declares that this property should be indexed. Deprecated — use
+    /// <see cref="UltraLiteCollection{T}.EnsureIndex(string, bool)"/> at database creation time instead.
     /// </summary>
     [Obsolete("Do not use Index attribute, use EnsureIndex on database creation")]
     public class BsonIndexAttribute : Attribute

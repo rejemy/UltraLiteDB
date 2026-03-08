@@ -202,8 +202,8 @@ namespace UltraLiteDB
     #endregion
 
     /// <summary>
-    /// Class to tokenize TextReader input used in JsonRead/BsonExpressions
-    /// This class are not thread safe
+    /// Streaming lexer that converts a <see cref="TextReader"/> into a sequence of <see cref="Token"/>s.
+    /// Used by JSON parsing and BSON expression evaluation. Not thread-safe.
     /// </summary>
     internal class Tokenizer
     {

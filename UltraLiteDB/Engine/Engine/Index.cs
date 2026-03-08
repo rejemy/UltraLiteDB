@@ -7,8 +7,12 @@ namespace UltraLiteDB
     {
 
         /// <summary>
-        /// Create a new index (or do nothing if already exists) to a collection/field
+        /// Creates a new index on the specified field, or returns false if the index already exists.
+        /// Reads all existing documents to populate the new index. Maximum 16 indexes per collection.
         /// </summary>
+        /// <param name="collection">The collection name.</param>
+        /// <param name="field">The field expression to index (supports dot notation).</param>
+        /// <param name="unique">If true, enforces unique values for this index.</param>
         public bool EnsureIndex(string collection, string field, bool unique = false)
         {
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));
@@ -65,7 +69,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Drop an index from a collection
+        /// Removes an index from a collection. Returns false if the collection or index does not exist.
+        /// The _id index cannot be dropped.
         /// </summary>
         public bool DropIndex(string collection, string field)
         {
@@ -101,7 +106,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// List all indexes inside a collection
+        /// Enumerates all indexes defined on a collection, including the _id primary key index.
         /// </summary>
         public IEnumerable<IndexInfo> GetIndexes(string collection)
         {

@@ -9,8 +9,12 @@ namespace UltraLiteDB
         #region Find
 
         /// <summary>
-        /// Find documents inside a collection using Query object.
+        /// Finds documents matching a <see cref="Query"/>. Results are lazily deserialized into <typeparamref name="T"/>.
         /// </summary>
+        /// <param name="query">The query to filter documents. Requires an index on the queried field.</param>
+        /// <param name="skip">Number of documents to skip from the beginning of the result set.</param>
+        /// <param name="limit">Maximum number of documents to return.</param>
+        /// <returns>Lazily enumerated matching documents.</returns>
         public IEnumerable<T> Find(Query query, int skip = 0, int limit = int.MaxValue)
         {
             if (query == null) throw new ArgumentNullException(nameof(query));
@@ -32,8 +36,9 @@ namespace UltraLiteDB
         #region FindById + One + All
 
         /// <summary>
-        /// Find a document using Document Id. Returns null if not found.
+        /// Finds a single document by its _id value. Returns null/default if not found.
         /// </summary>
+        /// <param name="id">The document _id to look up.</param>
         public T FindById(BsonValue id)
         {
             if (id == null || id.IsNull) throw new ArgumentNullException(nameof(id));
@@ -42,7 +47,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Find the first document using Query object. Returns null if not found. Must have index on query expression.
+        /// Returns the first document matching the query, or null/default if none match.
+        /// Requires an index on the queried field.
         /// </summary>
         public T FindOne(Query query)
         {

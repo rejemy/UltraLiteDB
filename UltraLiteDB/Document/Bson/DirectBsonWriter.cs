@@ -7,7 +7,8 @@ using System.Text;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Writes BSON bytes directly from C# objects, bypassing BsonDocument creation
+    /// Serializes C# objects directly to BSON bytes, bypassing intermediate <see cref="BsonDocument"/> creation.
+    /// Reduces GC pressure for high-throughput serialization. Supports polymorphism via _t/_type discriminators.
     /// </summary>
     internal static class DirectBsonWriter
     {

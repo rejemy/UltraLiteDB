@@ -4,8 +4,10 @@ using System.IO;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// A public class that take care of all engine data structure access - it´s basic implementation of a NoSql database
-    /// Its isolated from complete solution - works on low level only (no linq, no poco... just Bson objects)
+    /// Core database engine that manages all low-level data structure access for UltraLiteDB.
+    /// Operates directly on BSON objects without LINQ or POCO support. Provides CRUD operations,
+    /// indexing, collection management, and transaction handling over an <see cref="IDiskService"/>.
+    /// This class is implemented as a partial class with operations split across multiple files.
     /// </summary>
     public partial class UltraLiteEngine : IDisposable
     {
@@ -39,17 +41,18 @@ namespace UltraLiteDB
         public Logger Log { get { return _log; } }
 
         /// <summary>
-        /// Get memory cache size limit. Works only with journal enabled (number in pages). If journal is disabled, pages in cache can exceed this limit. Default is 5000 pages
+        /// Gets the memory cache size limit in pages. Only enforced when journaling is enabled;
+        /// if journaling is disabled, cached pages may exceed this limit. Default is 5000 pages.
         /// </summary>
         public int CacheSize { get { return _cacheSize; } }
 
         /// <summary>
-        /// Get how many pages are on cache
+        /// Gets the number of clean (non-dirty) pages currently held in cache.
         /// </summary>
         public int CacheUsed { get { return _cache.CleanUsed; } }
 
         /// <summary>
-        /// Gets time waiting write lock operation before throw UltraLiteException timeout
+        /// Gets the maximum time to wait for a write lock before throwing a timeout <see cref="UltraLiteException"/>.
         /// </summary>
         public TimeSpan Timeout { get { return _timeout; } }
 
@@ -59,32 +62,44 @@ namespace UltraLiteDB
         #region Ctor
 
         /// <summary>
-        /// Initialize UltraLiteEngine using default FileDiskService
+        /// Initializes a new <see cref="UltraLiteEngine"/> using the default <see cref="FileDiskService"/>.
         /// </summary>
+        /// <param name="filename">Path to the database file.</param>
+        /// <param name="journal">Whether to enable write-ahead journaling for crash recovery.</param>
         public UltraLiteEngine(string filename, bool journal = true)
             : this(new FileDiskService(filename, journal))
         {
         }
 
         /// <summary>
-        /// Initialize UltraLiteEngine with password encryption
+        /// Initializes a new <see cref="UltraLiteEngine"/> with AES password encryption using the default <see cref="FileDiskService"/>.
         /// </summary>
+        /// <param name="filename">Path to the database file.</param>
+        /// <param name="password">Password used for AES encryption of data pages.</param>
+        /// <param name="journal">Whether to enable write-ahead journaling for crash recovery.</param>
         public UltraLiteEngine(string filename, string password, bool journal = true)
             : this(new FileDiskService(filename, new FileOptions { Journal = journal }), password)
         {
         }
 
         /// <summary>
-        /// Initialize UltraLiteEngine using StreamDiskService
+        /// Initializes a new <see cref="UltraLiteEngine"/> backed by a <see cref="Stream"/> via <see cref="StreamDiskService"/>.
         /// </summary>
+        /// <param name="stream">The stream to use as the database storage.</param>
+        /// <param name="password">Optional password for AES encryption of data pages.</param>
         public UltraLiteEngine(Stream stream, string password = null)
             : this(new StreamDiskService(stream), password)
         {
         }
 
         /// <summary>
-        /// Initialize UltraLiteEngine using custom disk service implementation and full engine options
+        /// Initializes a new <see cref="UltraLiteEngine"/> using a custom <see cref="IDiskService"/> implementation with full engine options.
         /// </summary>
+        /// <param name="disk">The disk service implementation for storage I/O.</param>
+        /// <param name="password">Optional password for AES encryption of data pages.</param>
+        /// <param name="timeout">Maximum time to wait for a write lock. Defaults to 1 minute.</param>
+        /// <param name="cacheSize">Maximum number of pages to hold in the memory cache. Defaults to 5000.</param>
+        /// <param name="log">Optional <see cref="Logger"/> instance for diagnostic output.</param>
         public UltraLiteEngine(IDiskService disk, string password = null, TimeSpan? timeout = null, int cacheSize = 5000, Logger log = null)
         {
             if (disk == null) throw new ArgumentNullException(nameof(disk));
@@ -152,8 +167,12 @@ namespace UltraLiteDB
         #endregion
 
         /// <summary>
-        /// Get the collection page only when needed. Gets from pager always to grantee that wil be the last (in case of clear cache will get a new one - pageID never changes)
+        /// Retrieves the <see cref="CollectionPage"/> for the given collection name, optionally creating it if it does not exist.
+        /// Always reads from the pager to guarantee the latest version (the page ID never changes for a collection).
         /// </summary>
+        /// <param name="name">The collection name, or <c>null</c> to return <c>null</c>.</param>
+        /// <param name="addIfNotExits">If <c>true</c>, creates the collection when it does not exist.</param>
+        /// <returns>The <see cref="CollectionPage"/>, or <c>null</c> if not found and <paramref name="addIfNotExits"/> is <c>false</c>.</returns>
         private CollectionPage GetCollectionPage(string name, bool addIfNotExits)
         {
             if (name == null) return null;
@@ -172,8 +191,13 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Encapsulate all operations in a single write transaction
+        /// Executes an operation within a write transaction. Persists dirty pages on success or discards them on failure.
         /// </summary>
+        /// <typeparam name="T">The return type of the operation.</typeparam>
+        /// <param name="collection">The collection name to operate on.</param>
+        /// <param name="addIfNotExists">If <c>true</c>, creates the collection when it does not exist.</param>
+        /// <param name="action">The action to execute, receiving the <see cref="CollectionPage"/> (may be <c>null</c>).</param>
+        /// <returns>The result of the <paramref name="action"/>.</returns>
         private T Transaction<T>(string collection, bool addIfNotExists, Func<CollectionPage, T> action)
         {
 
@@ -201,6 +225,9 @@ namespace UltraLiteDB
             
         }
 
+        /// <summary>
+        /// Releases all resources used by the engine, including the underlying disk service and any AES encryption state.
+        /// </summary>
         public void Dispose()
         {
             // dispose datafile and journal file
@@ -211,8 +238,12 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Initialize new datafile with header page + lock reserved area zone
+        /// Creates a new empty database in the provided stream, writing the header page and lock-reserved area.
+        /// Optionally pre-allocates empty pages and sets up AES encryption.
         /// </summary>
+        /// <param name="stream">The stream to write the new database into.</param>
+        /// <param name="password">Optional password for AES encryption.</param>
+        /// <param name="initialSize">Optional initial file size in bytes. If greater than two pages, empty pages are pre-allocated.</param>
         public static void CreateDatabase(Stream stream, string password = null, long initialSize = 0)
         {
             // calculate how many empty pages will be added on disk

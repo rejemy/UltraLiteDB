@@ -4,7 +4,7 @@ using System.IO;
 namespace UltraLiteDB
 {
 	/// <summary>
-	/// A simple file helper tool with static methods
+	/// Static helper methods for temp file creation, safe deletion, and retry-with-timeout for locked files.
 	/// </summary>
 	internal static class FileHelper
     {
@@ -46,7 +46,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Try execute some action while has lock exception
+        /// Retry an action until it succeeds or the timeout expires, sleeping on <see cref="IOException"/> (file lock).
         /// </summary>
         public static void TryExec(Action action, TimeSpan timeout)
         {

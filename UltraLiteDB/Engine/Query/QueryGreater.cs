@@ -3,6 +3,9 @@ using System.Linq;
 
 namespace UltraLiteDB
 {
+	/// <summary>
+	/// Greater-than (&gt;) or greater-than-or-equal (&gt;=) query. Uses Index Seek to find the start position.
+	/// </summary>
 	internal class QueryGreater : Query
     {
         private BsonValue _value;

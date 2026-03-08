@@ -5,8 +5,9 @@ using System.Globalization;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Implement how database will compare to order by/find strings according defined culture/compare options
-    /// If not set, default is CurrentCulture with IgnoreCase
+    /// Defines string comparison rules (culture + <see cref="CompareOptions"/>) used by the database for
+    /// ordering and matching. Default is invariant culture with <see cref="CompareOptions.IgnoreCase"/>.
+    /// Also implements <see cref="IComparer{T}"/> for both <see cref="BsonValue"/> and <see cref="string"/>.
     /// </summary>
     public class Collation : IComparer<BsonValue>, IComparer<string>, IEqualityComparer<BsonValue>
     {

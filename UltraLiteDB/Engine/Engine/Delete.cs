@@ -6,16 +6,22 @@ namespace UltraLiteDB
     public partial class UltraLiteEngine
     {
         /// <summary>
-        /// Implement delete command based on _id value. Returns true if deleted
+        /// Deletes a single document by its <c>_id</c> value.
         /// </summary>
+        /// <param name="collection">The collection name.</param>
+        /// <param name="id">The <c>_id</c> value of the document to delete.</param>
+        /// <returns><c>true</c> if the document was found and deleted; otherwise <c>false</c>.</returns>
         public bool Delete(string collection, BsonValue id)
         {
             return this.Delete(collection, Query.EQ("_id", id)) == 1;
         }
 
         /// <summary>
-        /// Implements delete based on a query result
+        /// Deletes all documents matching a query. Removes associated index nodes and data pages.
         /// </summary>
+        /// <param name="collection">The collection name.</param>
+        /// <param name="query">The query selecting documents to delete.</param>
+        /// <returns>The number of documents deleted.</returns>
         public int Delete(string collection, Query query)
         {
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));

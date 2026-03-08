@@ -7,7 +7,7 @@ namespace UltraLiteDB
         #region Count
 
         /// <summary>
-        /// Get document count using property on collection.
+        /// Returns the total number of documents in this collection.
         /// </summary>
         public int Count()
         {
@@ -16,7 +16,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Count documents matching a query. This method does not deserialize any document. Needs indexes on query expression
+        /// Counts documents matching a query without deserializing them. Requires an index on the queried field.
         /// </summary>
         public int Count(Query query)
         {
@@ -31,7 +31,7 @@ namespace UltraLiteDB
         #region LongCount
 
         /// <summary>
-        /// Get document count using property on collection.
+        /// Returns the total number of documents in this collection as a 64-bit integer.
         /// </summary>
         public long LongCount()
         {
@@ -40,7 +40,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Count documents matching a query. This method does not deserialize any documents. Needs indexes on query expression
+        /// Counts documents matching a query as a 64-bit integer, without deserializing them. Requires an index on the queried field.
         /// </summary>
         public long LongCount(Query query)
         {
@@ -55,7 +55,7 @@ namespace UltraLiteDB
         #region Exists
 
         /// <summary>
-        /// Returns true if query returns any document. This method does not deserialize any document. Needs indexes on query expression
+        /// Returns true if at least one document matches the query, without deserializing. Requires an index on the queried field.
         /// </summary>
         public bool Exists(Query query)
         {
@@ -70,8 +70,9 @@ namespace UltraLiteDB
         #region Min/Max
 
         /// <summary>
-        /// Returns the first/min value from a index field
+        /// Returns the minimum value from an indexed field.
         /// </summary>
+        /// <param name="field">The indexed field name.</param>
         public BsonValue Min(string field)
         {
             if (string.IsNullOrEmpty(field)) throw new ArgumentNullException(nameof(field));
@@ -81,8 +82,9 @@ namespace UltraLiteDB
 
 
         /// <summary>
-        /// Returns the last/max value from a index field
+        /// Returns the maximum value from an indexed field.
         /// </summary>
+        /// <param name="field">The indexed field name.</param>
         public BsonValue Max(string field)
         {
             if (string.IsNullOrEmpty(field)) throw new ArgumentNullException(nameof(field));

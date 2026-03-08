@@ -7,7 +7,8 @@ using System.Text;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Reads BSON bytes directly into C# objects, bypassing BsonDocument creation
+    /// Deserializes BSON bytes directly into C# objects, bypassing intermediate <see cref="BsonDocument"/> creation.
+    /// Reduces GC pressure for high-throughput deserialization. Supports polymorphism via _t/_type discriminators.
     /// </summary>
     internal static class DirectBsonReader
     {

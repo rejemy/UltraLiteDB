@@ -4,13 +4,16 @@
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Internal class to deserialize a byte[] into a BsonDocument using BSON data format
+    /// Deserializes binary BSON data into <see cref="BsonDocument"/> and <see cref="BsonArray"/> objects.
+    /// Reads the BSON wire format using <see cref="ByteReader"/>.
     /// </summary>
     public static class BsonReader
     {
         /// <summary>
-        /// Main method - deserialize using ByteReader helper
+        /// Deserializes a <see cref="BsonDocument"/> from a byte array.
         /// </summary>
+        /// <param name="bson">BSON-encoded byte array.</param>
+        /// <param name="offset">Byte offset to start reading from.</param>
         public static BsonDocument Deserialize(byte[] bson, int offset = 0)
         {
             ByteReader reader = new ByteReader(bson);
@@ -18,13 +21,16 @@ namespace UltraLiteDB
             return ReadDocument(reader);
         }
 
+        /// <summary>
+        /// Deserializes a <see cref="BsonDocument"/> from an <see cref="ArraySegment{T}"/>.
+        /// </summary>
         public static BsonDocument Deserialize(ArraySegment<byte> bson)
         {
             return ReadDocument(new ByteReader(bson));
         }
 
         /// <summary>
-        /// Read a BsonDocument from reader
+        /// Reads a complete BSON document (length prefix + elements + terminator) from the reader.
         /// </summary>
         public static BsonDocument ReadDocument(ByteReader reader)
         {
@@ -44,7 +50,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Read an BsonArray from reader
+        /// Reads a complete BSON array (length prefix + indexed elements + terminator) from the reader.
         /// </summary>
         public static BsonArray ReadArray(ByteReader reader)
         {
@@ -64,7 +70,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Reads an element (key-value) from an reader
+        /// Reads a single BSON element (type byte + CString key + value) and outputs the field name.
         /// </summary>
         private static BsonValue ReadElement(ByteReader reader, out string name)
         {

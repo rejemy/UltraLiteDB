@@ -5,6 +5,9 @@ using System.Text.RegularExpressions;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Extension methods for LINQ <see cref="Expression"/> trees, used to extract dotted property paths from lambda expressions.
+    /// </summary>
     internal static class ExpressionExtensions
     {
         // more dirty as possible: removing ".Select(x => x." sentence

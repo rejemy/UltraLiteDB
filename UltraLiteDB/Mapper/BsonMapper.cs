@@ -9,16 +9,17 @@ using System.Text.RegularExpressions;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Class that converts your entity class to/from BsonDocument
-    /// If you prefer use a new instance of BsonMapper (not Global), be sure cache this instance for better performance
-    /// Serialization rules:
-    ///     - Classes must be "public" with a public constructor (without parameters)
-    ///     - Properties must have public getter (can be read-only)
-    ///     - Entity class must have Id property, [ClassName]Id property or [BsonId] attribute
-    ///     - No circular references
-    ///     - Fields are not valid
-    ///     - IList, Array supports
-    ///     - IDictionary supports (Key must be a simple datatype - converted by ChangeType)
+    /// Maps .NET entity classes to and from <see cref="BsonDocument"/> representations.
+    /// If you use a new instance rather than <see cref="Global"/>, cache it for better performance.
+    /// <para>Serialization rules:</para>
+    /// <list type="bullet">
+    ///   <item>Classes must be public with a public parameterless constructor</item>
+    ///   <item>Properties must have a public getter (can be read-only)</item>
+    ///   <item>Entity class must have an Id property, [ClassName]Id property, or <see cref="BsonIdAttribute"/></item>
+    ///   <item>No circular references</item>
+    ///   <item>Fields are not mapped by default (see <see cref="IncludeFields"/>)</item>
+    ///   <item><see cref="IList"/>, Array, <see cref="IDictionary"/> types are supported</item>
+    /// </list>
     /// </summary>
     public partial class BsonMapper
     {
@@ -27,74 +28,84 @@ namespace UltraLiteDB
         #region Properties
 
         /// <summary>
-        /// Mapping cache between Class/BsonDocument
+        /// Cache of entity type mappings, keyed by CLR type.
         /// </summary>
         private Dictionary<Type, EntityMapper> _entities = new Dictionary<Type, EntityMapper>();
 
         /// <summary>
-        /// Map serializer/deserialize for custom types
+        /// Custom serialization functions registered for specific types.
         /// </summary>
         private Dictionary<Type, Func<object, BsonValue>> _customSerializer = new Dictionary<Type, Func<object, BsonValue>>();
 
+        /// <summary>
+        /// Custom deserialization functions registered for specific types.
+        /// </summary>
         private Dictionary<Type, Func<BsonValue, object>> _customDeserializer = new Dictionary<Type, Func<BsonValue, object>>();
 
+        /// <summary>
+        /// Maps CLR types to compact BSON type identifiers for polymorphic serialization.
+        /// </summary>
         private Dictionary<Type, BsonValue> _customTypeToId = new Dictionary<Type, BsonValue>();
+
+        /// <summary>
+        /// Reverse lookup from compact BSON type identifiers back to CLR types.
+        /// </summary>
         private Dictionary<BsonValue, Type> _customIdToType = new Dictionary<BsonValue, Type>();
 
         /// <summary>
-        /// Type instantiator function to support IoC
+        /// Factory function used to create instances of types, supporting IoC containers.
         /// </summary>
         private readonly Func<Type, object> _typeInstantiator;
 
         /// <summary>
-        /// Global instance used when no BsonMapper are passed in UltraLiteDatabase ctor
+        /// Global singleton instance used when no <see cref="BsonMapper"/> is passed to the database constructor.
         /// </summary>
         public static BsonMapper Global = new BsonMapper();
 
         /// <summary>
-        /// A resolver name for field
+        /// Function that resolves a .NET property name to a BSON document field name.
+        /// Defaults to identity (no transformation).
         /// </summary>
         public Func<string, string> ResolveFieldName;
 
         /// <summary>
-        /// Indicate that mapper do not serialize null values (default false)
+        /// When <c>true</c>, null values are included in serialized BSON documents. Default is <c>false</c>.
         /// </summary>
         public bool SerializeNullValues { get; set; }
 
         /// <summary>
-        /// Apply .Trim() in strings when serialize (default true)
+        /// When <c>true</c>, applies <see cref="string.Trim()"/> to string values during serialization. Default is <c>true</c>.
         /// </summary>
         public bool TrimWhitespace { get; set; }
 
         /// <summary>
-        /// Convert EmptyString to Null (default true)
+        /// When <c>true</c>, empty strings are converted to <see cref="BsonValue.Null"/> during serialization. Default is <c>true</c>.
         /// </summary>
         public bool EmptyStringToNull { get; set; }
 
         /// <summary>
-        /// Get/Set that mapper must include fields (default: false)
+        /// When <c>true</c>, public fields (not just properties) are included in the mapping. Default is <c>false</c>.
         /// </summary>
         public bool IncludeFields { get; set; }
 
         /// <summary>
-        /// Get/Set that mapper must include non public (private, protected and internal) (default: false)
+        /// When <c>true</c>, non-public members (private, protected, internal) are included in the mapping. Default is <c>false</c>.
         /// </summary>
         public bool IncludeNonPublic { get; set; }
 
         /// <summary>
-        /// Whether the serializer should include full typename data when the object type is a derived type (default: true)
+        /// When <c>true</c>, the serializer includes the assembly-qualified type name (<c>_type</c> field) for derived types to support polymorphic deserialization. Default is <c>true</c>.
         /// </summary>
         public bool IncludeFullType { get; set; }
 
         /// <summary>
-        /// A custom callback to change MemberInfo behavior when converting to MemberMapper.
-        /// Use mapper.ResolveMember(Type entity, MemberInfo property, MemberMapper documentMappedField)
-        /// Set FieldName to null if you want remove from mapped document
+        /// Optional callback invoked for each member during entity mapping, allowing customization of the <see cref="MemberMapper"/>.
+        /// Set <see cref="MemberMapper.FieldName"/> to <c>null</c> to exclude the member from the mapped document.
         /// </summary>
         public Action<Type, MemberInfo, MemberMapper> ResolveMember;
 
         /// <summary>
-        /// Custom resolve name collection based on Type 
+        /// Function that resolves a collection name from a CLR type. Defaults to using the type name.
         /// </summary>
         public Func<Type, string> ResolveCollectionName;
 
@@ -107,6 +118,10 @@ namespace UltraLiteDB
 
         #endregion
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="BsonMapper"/> with default settings and optional IoC support.
+        /// </summary>
+        /// <param name="customTypeInstantiator">Optional factory function for creating type instances, enabling IoC integration. If <c>null</c>, uses <see cref="Reflection.CreateInstance"/>.</param>
         public BsonMapper(Func<Type, object> customTypeInstantiator = null)
         {
             this.SerializeNullValues = false;
@@ -138,8 +153,11 @@ namespace UltraLiteDB
         #region Register CustomType
 
         /// <summary>
-        /// Register a custom type serializer/deserialize function
+        /// Registers custom serialization and deserialization functions for type <typeparamref name="T"/>.
         /// </summary>
+        /// <typeparam name="T">The type to register custom conversion for.</typeparam>
+        /// <param name="serialize">Function that converts an instance of <typeparamref name="T"/> to a <see cref="BsonValue"/>.</param>
+        /// <param name="deserialize">Function that converts a <see cref="BsonValue"/> back to an instance of <typeparamref name="T"/>.</param>
         public void RegisterType<T>(Func<T, BsonValue> serialize, Func<BsonValue, T> deserialize)
         {
             _customSerializer[typeof(T)] = (o) => serialize((T)o);
@@ -147,14 +165,23 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Register a custom type serializer/deserialize function
+        /// Registers custom serialization and deserialization functions for the specified type (non-generic overload).
         /// </summary>
+        /// <param name="type">The type to register custom conversion for.</param>
+        /// <param name="serialize">Function that converts an object instance to a <see cref="BsonValue"/>.</param>
+        /// <param name="deserialize">Function that converts a <see cref="BsonValue"/> back to an object instance.</param>
         public void RegisterType(Type type, Func<object, BsonValue> serialize, Func<BsonValue, object> deserialize)
         {
             _customSerializer[type] = (o) => serialize(o);
             _customDeserializer[type] = (b) => deserialize(b);
         }
 
+        /// <summary>
+        /// Registers a compact type identifier for polymorphic serialization. The type will be stored
+        /// as a <c>_t</c> field instead of the full assembly-qualified name, reducing document size.
+        /// </summary>
+        /// <param name="t">The CLR type to register.</param>
+        /// <param name="id">The compact <see cref="BsonValue"/> identifier for this type.</param>
         public void RegisterTypeId(Type t, BsonValue id)
         {
             _customTypeToId.Add(t, id);
@@ -164,8 +191,10 @@ namespace UltraLiteDB
         #endregion
 
         /// <summary>
-        /// Map your entity class to BsonDocument using fluent API
+        /// Returns a fluent <see cref="EntityBuilder{T}"/> for configuring how type <typeparamref name="T"/> maps to a <see cref="BsonDocument"/>.
         /// </summary>
+        /// <typeparam name="T">The entity type to configure.</typeparam>
+        /// <returns>An <see cref="EntityBuilder{T}"/> for chaining mapping configuration.</returns>
         public EntityBuilder<T> Entity<T>()
         {
             return new EntityBuilder<T>(this);

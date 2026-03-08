@@ -4,7 +4,8 @@ using System.Collections.Generic;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Manage ConnectionString to connect and create databases. Connection string are NameValue using Name1=Value1; Name2=Value2
+    /// Parsed representation of a database connection string. Supports "key=value;..." format or a plain filename.
+    /// Keys: filename, journal, password, cache size, timeout, initial size, limit size, log, async, flush.
     /// </summary>
     public class ConnectionString
     {

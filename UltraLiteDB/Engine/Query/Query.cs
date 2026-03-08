@@ -4,15 +4,19 @@ using System.Collections.Generic;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Class helper to create query using indexes in database. All methods are statics.
-    /// Queries can be executed in 3 ways: Index Seek (fast), Index Scan (good), Full Scan (slow)
+    /// Abstract base class for all query types. Provides static factory methods to build composable queries.
+    /// Execution strategies: Index Seek (fast, exact match), Index Scan (walks index range), Full Scan (checks every document).
     /// </summary>
     public abstract class Query
     {
+        /// <summary>The field name this query operates on.</summary>
         public string Field { get; private set; }
 
+        /// <summary>Parsed field expression used for evaluating document values during full scan.</summary>
         internal BsonFields Expression { get; set; }
+        /// <summary>True if this query will use an index for execution.</summary>
         internal virtual bool UseIndex { get; set; }
+        /// <summary>True if this query requires full-scan document filtering.</summary>
         internal virtual bool UseFilter { get; set; }
 
         internal Query(string field)
@@ -22,18 +26,14 @@ namespace UltraLiteDB
 
         #region Static Methods
 
-        /// <summary>
-        /// Indicate when a query must execute in ascending order
-        /// </summary>
+        /// <summary>Ascending index traversal order.</summary>
         public const int Ascending = 1;
 
-        /// <summary>
-        /// Indicate when a query must execute in descending order
-        /// </summary>
+        /// <summary>Descending index traversal order.</summary>
         public const int Descending = -1;
 
         /// <summary>
-        /// Returns all documents using _id index order
+        /// Returns all documents ordered by the _id index.
         /// </summary>
         public static Query All(int order = Ascending)
         {
@@ -41,7 +41,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents using field index order
+        /// Returns all documents ordered by the specified field's index.
         /// </summary>
         public static Query All(string field, int order = Ascending)
         {
@@ -51,7 +51,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents that value are equals to value (=)
+        /// Returns all documents where the field equals the value (=). Uses Index Seek when an index exists.
         /// </summary>
         public static Query EQ(string field, BsonValue value)
         {
@@ -61,7 +61,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents that value are less than value (&lt;)
+        /// Returns all documents where the field is less than the value (&lt;).
         /// </summary>
         public static Query LT(string field, BsonValue value)
         {
@@ -71,7 +71,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents that value are less than or equals value (&lt;=)
+        /// Returns all documents where the field is less than or equal to the value (&lt;=).
         /// </summary>
         public static Query LTE(string field, BsonValue value)
         {
@@ -81,7 +81,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all document that value are greater than value (&gt;)
+        /// Returns all documents where the field is greater than the value (&gt;).
         /// </summary>
         public static Query GT(string field, BsonValue value)
         {
@@ -91,7 +91,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents that value are greater than or equals value (&gt;=)
+        /// Returns all documents where the field is greater than or equal to the value (&gt;=).
         /// </summary>
         public static Query GTE(string field, BsonValue value)
         {
@@ -101,7 +101,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all document that values are between "start" and "end" values (BETWEEN)
+        /// Returns all documents where the field value falls between start and end (inclusive/exclusive configurable).
         /// </summary>
         public static Query Between(string field, BsonValue start, BsonValue end, bool startEquals = true, bool endEquals = true)
         {
@@ -111,7 +111,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents that starts with value (LIKE)
+        /// Returns all documents where the string field starts with the specified prefix. Uses Index Seek.
         /// </summary>
         public static Query StartsWith(string field, string value)
         {
@@ -122,7 +122,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents that contains value (CONTAINS)
+        /// Returns all documents where the string field contains the specified substring. Always uses Index Scan.
         /// </summary>
         public static Query Contains(string field, string value)
         {
@@ -133,7 +133,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents that are not equals to value (not equals)
+        /// Returns all documents where the field does not equal the value (!=). Uses Index Scan.
         /// </summary>
         public static Query Not(string field, BsonValue value)
         {
@@ -142,7 +142,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents that in query result (not result)
+        /// Negates a query — returns all documents NOT in the inner query's result set.
         /// </summary>
         public static Query Not(Query query, int order = Query.Ascending)
         {
@@ -152,7 +152,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents that has value in values list (IN)
+        /// Returns all documents where the field matches any value in the list (IN).
         /// </summary>
         public static Query In(string field, BsonArray value)
         {
@@ -163,7 +163,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents that has value in values list (IN)
+        /// Returns all documents where the field matches any value in the list (IN).
         /// </summary>
         public static Query In(string field, params BsonValue[] values)
         {
@@ -174,7 +174,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns all documents that has value in values list (IN)
+        /// Returns all documents where the field matches any value in the list (IN).
         /// </summary>
         public static Query In(string field, IEnumerable<BsonValue> values)
         {
@@ -185,7 +185,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Apply a predicate function in an index result. Execute full index scan but it's faster then runs over deserialized document.
+        /// Applies a predicate function against index values. Performs an Index Scan (faster than full document deserialization).
         /// </summary>
         public static Query Where(string field, Func<BsonValue, bool> predicate, int order = Query.Ascending)
         {
@@ -196,7 +196,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns document that exists in BOTH queries results. If both queries has indexes, left query has index preference (other side will be run in full scan)
+        /// Returns documents matching BOTH queries (intersection). The left query has index preference;
+        /// the right side falls back to full scan. Automatically optimizes GT+LT on the same field into Between.
         /// </summary>
         public static Query And(Query left, Query right)
         {
@@ -216,7 +217,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns document that exists in ALL queries results.
+        /// Returns documents matching ALL queries by chaining pairwise And operations.
         /// </summary>
         public static Query And(params Query[] queries)
         {
@@ -232,7 +233,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns documents that exists in ANY queries results (Union).
+        /// Returns documents matching EITHER query (union).
         /// </summary>
         public static Query Or(Query left, Query right)
         {
@@ -243,7 +244,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns document that exists in ANY queries results (Union).
+        /// Returns documents matching ANY query by chaining pairwise Or operations.
         /// </summary>
         public static Query Or(params Query[] queries)
         {
@@ -263,7 +264,7 @@ namespace UltraLiteDB
         #region Executing Query
 
         /// <summary>
-        /// Find witch index will be used and run Execute method
+        /// Determines the execution strategy (index vs full scan) and returns matching <see cref="IndexNode"/> entries.
         /// </summary>
         internal virtual IEnumerable<IndexNode> Run(CollectionPage col, IndexService indexer)
         {
@@ -295,13 +296,12 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Abstract method that must be implement for index seek/scan - Returns IndexNodes that match with index
+        /// Executes the query against a specific index, returning matching <see cref="IndexNode"/> entries.
         /// </summary>
         internal abstract IEnumerable<IndexNode> ExecuteIndex(IndexService indexer, CollectionIndex index);
 
         /// <summary>
-        /// Abstract method that must implement full scan - will be called for each document and need
-        /// returns true if condition was satisfied
+        /// Full-scan filter: returns true if the deserialized document satisfies this query's condition.
         /// </summary>
         internal abstract bool FilterDocument(BsonDocument doc);
 

@@ -9,16 +9,20 @@ namespace UltraLiteDB
 {
     #region Delegates
 
+    /// <summary>Factory delegate for parameterless object creation.</summary>
     internal delegate object CreateObject();
 
+    /// <summary>Delegate that sets a member value on a target object.</summary>
     public delegate void GenericSetter(object target, object value);
 
+    /// <summary>Delegate that gets a member value from a source object.</summary>
     public delegate object GenericGetter(object obj);
 
     #endregion
 
     /// <summary>
-    /// Helper class to get entity properties and map as BsonValue
+    /// Reflection utilities for creating instances, building property getters/setters,
+    /// and inspecting generic type information used by <see cref="BsonMapper"/>.
     /// </summary>
     internal class Reflection
     {
@@ -27,7 +31,8 @@ namespace UltraLiteDB
         #region CreateInstance
 
         /// <summary>
-        /// Create a new instance from a Type
+        /// Creates an instance of the given type using a cached parameterless constructor delegate.
+        /// Handles classes, structs, and known generic interfaces (IList, IDictionary, IEnumerable).
         /// </summary>
         public static object CreateInstance(Type type)
         {
@@ -97,6 +102,7 @@ namespace UltraLiteDB
 
         #region Utils
 
+        /// <summary>Returns true if the type is <see cref="Nullable{T}"/>.</summary>
         public static bool IsNullable(Type type)
         {
             if (!type.GetTypeInfo().IsGenericType) return false;
@@ -105,7 +111,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get underlying get - using to get inner Type from Nullable type
+        /// Gets the first generic type argument (e.g. <c>int</c> from <c>Nullable&lt;int&gt;</c>).
+        /// Returns the type unchanged if it is not generic.
         /// </summary>
         public static Type UnderlyingTypeOf(Type type)
         {
@@ -117,12 +124,14 @@ namespace UltraLiteDB
             return type.GetTypeInfo().GetGenericArguments()[0];
         }
 
+        /// <summary>Constructs <c>List&lt;T&gt;</c> for the given element type.</summary>
         public static Type GetGenericListOfType(Type type)
         {
             var listType = typeof(List<>);
             return listType.MakeGenericType(type);
         }
 
+        /// <summary>Constructs <c>Dictionary&lt;K,V&gt;</c> for the given key and value types.</summary>
         public static Type GetGenericDictionaryOfType(Type k, Type v)
         {
             var listType = typeof(Dictionary<,>);
@@ -130,7 +139,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get item type from a generic List or Array
+        /// Gets the element type from an array type or the <c>T</c> from <c>IEnumerable&lt;T&gt;</c>.
+        /// Returns <c>typeof(object)</c> if no generic enumerable interface is found.
         /// </summary>
         public static Type GetListItemType(Type listType)
         {
@@ -154,7 +164,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns true if Type is any kind of Array/IList/ICollection/....
+        /// Returns true if the type implements <c>IEnumerable&lt;T&gt;</c> (excluding <c>string</c> and <c>BsonDocument</c>).
         /// </summary>
         public static bool IsList(Type type)
         {
@@ -177,7 +187,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Select member from a list of member using predicate order function to select
+        /// Returns the first member matching any of the predicates, evaluated in order of priority.
+        /// Used to resolve ID members by convention (e.g. "Id", "TypeNameId", "_id").
         /// </summary>
         public static MemberInfo SelectMember(IEnumerable<MemberInfo> members, params Func<MemberInfo, bool>[] predicates)
         {
@@ -196,16 +207,21 @@ namespace UltraLiteDB
 
         #endregion
 
+        /// <summary>Creates a <see cref="CreateObject"/> factory for a class type using <see cref="Activator"/>.</summary>
         public static CreateObject CreateClass(Type type)
         {
             return () => Activator.CreateInstance(type);
         }
 
+        /// <summary>Creates a <see cref="CreateObject"/> factory for a struct type using <see cref="Activator"/>.</summary>
         public static CreateObject CreateStruct(Type type)
         {
             return () => Activator.CreateInstance(type);
         }
 
+        /// <summary>
+        /// Creates a getter delegate for a field or property. Returns null if the property has no get accessor.
+        /// </summary>
         public static GenericGetter CreateGenericGetter(Type type, MemberInfo memberInfo)
         {
             // when member is a field, use simple Reflection
@@ -225,6 +241,10 @@ namespace UltraLiteDB
             return target => getMethod.Invoke(target, null);
         }
 
+        /// <summary>
+        /// Creates a setter delegate for a field or property. Returns null if the property has no set accessor.
+        /// Includes special handling for <c>byte[]</c> members that receive <c>ArraySegment&lt;byte&gt;</c> values.
+        /// </summary>
         public static GenericSetter CreateGenericSetter(Type type, MemberInfo memberInfo)
         {
             

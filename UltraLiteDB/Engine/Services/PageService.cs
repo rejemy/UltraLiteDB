@@ -3,6 +3,10 @@ using System.Linq;
 
 namespace UltraLiteDB
 {
+	/// <summary>
+	/// Core page management service: reads pages from disk/cache, creates new pages, deletes pages,
+	/// and manages free-list linked lists for efficient page reuse. Handles encryption/decryption transparently.
+	/// </summary>
 	internal class PageService
     {
         private CacheService _cache;
@@ -19,7 +23,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get a page from cache or from disk (get from cache or from disk)
+        /// Gets a page by ID, reading from cache first and falling back to disk. Decrypts if encryption is enabled.
         /// </summary>
         public T GetPage<T>(uint pageID)
             where T : BasePage
@@ -49,8 +53,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Set a page as dirty and ensure page are in cache. Should be used after any change on page 
-        /// Do not use on end of method because page can be deleted/change type
+        /// Marks a page as dirty so it will be written to disk on the next checkpoint/commit.
         /// </summary>
         public void SetDirty(BasePage page)
         {
@@ -58,7 +61,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Read all sequences pages from a start pageID (using NextPageID)
+        /// Follows the <see cref="BasePage.NextPageID"/> chain starting from the given page, yielding each page in sequence.
         /// </summary>
         public IEnumerable<T> GetSeqPages<T>(uint firstPageID)
             where T : BasePage
@@ -76,7 +79,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get a new empty page - can be a reused page (EmptyPage) or a clean one (extend datafile)
+        /// Allocates a new page, either by reusing an <see cref="EmptyPage"/> from the free list or by extending the data file.
+        /// Optionally links the new page to a previous page in a sequence.
         /// </summary>
         public T NewPage<T>(BasePage prevPage = null)
             where T : BasePage
@@ -131,10 +135,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Delete an page using pageID - transform them in Empty Page and add to EmptyPageList
-        /// If you delete a page, you can using same old instance of page - page will be converter to EmptyPage
-        /// If need deleted page, use GetPage again
+        /// Converts a page (or a chain of pages) to <see cref="EmptyPage"/> and adds them to the free empty page list.
         /// </summary>
+        /// <param name="pageID">The page ID to delete.</param>
+        /// <param name="addSequence">If true, follows the NextPageID chain and deletes all pages in the sequence.</param>
         public void DeletePage(uint pageID, bool addSequence = false)
         {
             // get all pages in sequence or a single one
@@ -158,7 +162,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns a page that contains space enough to data to insert new object - if one does not exit, creates a new page.
+        /// Returns a page with at least <paramref name="size"/> free bytes, or creates a new page if none available.
         /// </summary>
         public T GetFreePage<T>(uint startPageID, int size)
             where T : BasePage
@@ -185,12 +189,12 @@ namespace UltraLiteDB
         #region Add Or Remove do empty list
 
         /// <summary>
-        /// Add or Remove a page in a sequence
+        /// Adds or removes a page from a free-list doubly-linked list, maintaining descending free-space order.
         /// </summary>
-        /// <param name="add">Indicate that will add or remove from FreeList</param>
-        /// <param name="page">Page to add or remove from FreeList</param>
-        /// <param name="startPage">Page reference where start the header list node</param>
-        /// <param name="fieldPageID">Field reference, from startPage</param>
+        /// <param name="add">True to add/reposition; false to remove.</param>
+        /// <param name="page">The page to add or remove.</param>
+        /// <param name="startPage">The page containing the list head pointer.</param>
+        /// <param name="fieldPageID">Reference to the head pointer field on <paramref name="startPage"/>.</param>
         public void AddOrRemoveToFreeList(bool add, BasePage page, BasePage startPage, ref uint fieldPageID)
         {
             if (add)
@@ -217,7 +221,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Add a page in free list in desc free size order
+        /// Inserts a page into the free list, maintaining descending free-space order.
         /// </summary>
         private void AddToFreeList(BasePage page, BasePage startPage, ref uint fieldPageID)
         {
@@ -286,7 +290,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Remove a page from list - the ease part
+        /// Removes a page from the free list by re-linking its neighbors.
         /// </summary>
         private void RemoveToFreeList(BasePage page, BasePage startPage, ref uint fieldPageID)
         {
@@ -319,7 +323,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// When a page is already on a list it's more efficient just move comparing with siblings
+        /// Repositions a page already on the free list by removing and re-inserting it.
         /// </summary>
         private void MoveToFreeList(BasePage page, BasePage startPage, ref uint fieldPageID)
         {

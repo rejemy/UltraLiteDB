@@ -3,12 +3,14 @@
 namespace UltraLiteDB
 {
     /// <summary>
-    /// The DataPage thats stores object data.
+    /// A page that stores document data as <see cref="DataBlock"/> entries. Each collection has its own
+    /// chain of data pages linked via the free-list. Documents larger than a single page use
+    /// <see cref="ExtendPage"/> for overflow storage.
     /// </summary>
     internal class DataPage : BasePage
     {
         /// <summary>
-        /// Page type = Extend
+        /// Page type = Data
         /// </summary>
         public override PageType PageType { get { return PageType.Data; } }
 
@@ -23,6 +25,9 @@ namespace UltraLiteDB
         /// </summary>
         private Dictionary<ushort, DataBlock> _dataBlocks = new Dictionary<ushort, DataBlock>();
 
+        /// <summary>
+        /// Gets the dictionary of all <see cref="DataBlock"/> entries on this page, keyed by block index.
+        /// </summary>
         public Dictionary<ushort, DataBlock> DataBlocks => _dataBlocks;
 
         public DataPage(uint pageID)

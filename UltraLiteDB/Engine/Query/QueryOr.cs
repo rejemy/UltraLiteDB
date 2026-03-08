@@ -4,6 +4,9 @@ using System.Linq;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Combines two queries with logical OR (union). Deduplicates results using <see cref="IndexNodeComparer"/>.
+    /// </summary>
     internal class QueryOr : Query
     {
         private Query _left;

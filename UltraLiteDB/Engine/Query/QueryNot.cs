@@ -5,7 +5,8 @@ using System.Linq;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Not is an Index Scan operation
+    /// Logical NOT query — returns all documents that do NOT match the inner query.
+    /// When the inner query uses an index, computes the set difference against all _id nodes.
     /// </summary>
     internal class QueryNot : Query
     {

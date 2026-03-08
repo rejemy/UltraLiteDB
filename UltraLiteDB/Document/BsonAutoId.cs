@@ -1,7 +1,7 @@
 namespace UltraLiteDB
 {
     /// <summary>
-    /// All supported BsonTypes supported in AutoId insert operation
+    /// Specifies the data type for auto-generated _id values when a document is inserted without an _id field.
     /// </summary>
     public enum BsonAutoId
     {

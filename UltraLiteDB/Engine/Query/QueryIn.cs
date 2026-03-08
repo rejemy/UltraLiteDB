@@ -3,6 +3,9 @@ using System.Linq;
 
 namespace UltraLiteDB
 {
+	/// <summary>
+	/// Membership query (IN). Performs an Index Seek for each distinct value in the list.
+	/// </summary>
 	internal class QueryIn : Query
     {
         private IEnumerable<BsonValue> _values;

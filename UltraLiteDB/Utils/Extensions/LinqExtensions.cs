@@ -3,8 +3,14 @@ using System.Collections.Generic;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// LINQ extension methods for batching and distinct-by-key operations.
+    /// </summary>
     internal static class LinqExtensions
     {
+        /// <summary>
+        /// Split a sequence into batches of the specified size.
+        /// </summary>
         public static IEnumerable<IEnumerable<T>> Batch<T>(
             this IEnumerable<T> source, int batchSize)
         {
@@ -21,6 +27,9 @@ namespace UltraLiteDB
                 yield return source.Current;
         }
 
+        /// <summary>
+        /// Returns distinct elements by a projected key, using the specified equality comparer.
+        /// </summary>
         public static IEnumerable<TSource> DistinctBy<TSource, TKey>(this IEnumerable<TSource> source,
             Func<TSource, TKey> keySelector, IEqualityComparer<TKey> comparer)
         {

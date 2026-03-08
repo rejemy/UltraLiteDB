@@ -3,6 +3,9 @@ using System.Linq;
 
 namespace UltraLiteDB
 {
+	/// <summary>
+	/// Less-than (&lt;) or less-than-or-equal (&lt;=) query. Walks the index from the beginning until the bound is reached.
+	/// </summary>
 	internal class QueryLess : Query
     {
         private BsonValue _value;

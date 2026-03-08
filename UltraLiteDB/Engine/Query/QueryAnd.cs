@@ -4,6 +4,9 @@ using System.Linq;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Combines two queries with logical AND. The left query has index preference; the right falls back to full scan.
+    /// </summary>
     internal class QueryAnd : Query
     {
         private Query _left;

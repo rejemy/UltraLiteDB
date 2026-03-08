@@ -5,6 +5,9 @@ using System.Text.RegularExpressions;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Extension methods for dictionaries: key lookup, connection string parsing, and file size parsing.
+    /// </summary>
     internal static class DictionaryExtensions
     {
         /// <summary>
@@ -24,6 +27,9 @@ namespace UltraLiteDB
             return next;
         }
 
+        /// <summary>
+        /// Returns the value for the given key, or a default value if the key is not present.
+        /// </summary>
         public static T GetOrDefault<K, T>(this IDictionary<K, T> dict, K key, T defaultValue = default(T))
         {
             if (dict.TryGetValue(key, out T result))
@@ -34,6 +40,9 @@ namespace UltraLiteDB
             return defaultValue;
         }
 
+        /// <summary>
+        /// Parse a "key=value;key=value" connection string into the dictionary.
+        /// </summary>
         public static void ParseKeyValue(this IDictionary<string, string> dict, string connectionString)
         {
             var s = new StringScanner(connectionString);

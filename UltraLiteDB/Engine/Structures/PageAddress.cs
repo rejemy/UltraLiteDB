@@ -1,7 +1,8 @@
 ﻿namespace UltraLiteDB
 {
 	/// <summary>
-	/// Represents a page address inside a page structure - index could be byte offset position OR index in a list (6 bytes)
+	/// A 6-byte address identifying an item within a page: 4 bytes for <see cref="PageID"/> + 2 bytes for <see cref="Index"/>.
+	/// Used to reference <see cref="IndexNode"/>s and <see cref="DataBlock"/>s across pages.
 	/// </summary>
 	internal struct PageAddress
     {

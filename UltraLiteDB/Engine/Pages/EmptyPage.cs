@@ -3,7 +3,8 @@
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Represent a empty page (reused)
+    /// Represents a deallocated page that has been returned to the free list for reuse.
+    /// Empty pages contain no meaningful content and are recycled when new pages are needed.
     /// </summary>
     internal class EmptyPage : BasePage
     {
@@ -12,6 +13,10 @@ namespace UltraLiteDB
         /// </summary>
         public override PageType PageType { get { return PageType.Empty; } }
 
+        /// <summary>
+        /// Initializes a new empty page with the given page identifier.
+        /// </summary>
+        /// <param name="pageID">The page identifier to assign.</param>
         public EmptyPage(uint pageID)
             : base(pageID)
         {
@@ -19,6 +24,10 @@ namespace UltraLiteDB
             this.FreeBytes = PAGE_AVAILABLE_BYTES;
         }
 
+        /// <summary>
+        /// Creates an empty page from an existing page, preserving its disk data for journaling.
+        /// </summary>
+        /// <param name="page">The source page to convert to empty.</param>
         public EmptyPage(BasePage page)
             : base(page.PageID)
         {

@@ -3,6 +3,9 @@ using System.Collections.Generic;
 
 namespace UltraLiteDB
 {
+	/// <summary>
+	/// Exact equality query (=). Uses Index Seek for O(log n) lookup.
+	/// </summary>
 	internal class QueryEquals : Query
     {
         private BsonValue _value;

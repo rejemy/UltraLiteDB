@@ -15,6 +15,9 @@ namespace UltraLiteDB
         /// </summary>
         public const ushort MAX_COLLECTIONS_SIZE = 3000;
 
+        /// <summary>
+        /// Regex pattern that validates collection names: 1-60 word characters or hyphens.
+        /// </summary>
         public static Regex NamePattern = new Regex(@"^[\w-]{1,60}$", RegexOptions.Compiled);
 
         /// <summary>
@@ -48,6 +51,10 @@ namespace UltraLiteDB
         /// </summary>
         public long Sequence { get; set; }
 
+        /// <summary>
+        /// Initializes a new <see cref="CollectionPage"/> with default index slots and counters.
+        /// </summary>
+        /// <param name="pageID">The page identifier for this collection page.</param>
         public CollectionPage(uint pageID)
             : base(pageID)
         {
@@ -145,8 +152,9 @@ namespace UltraLiteDB
         #region Methods to work with index array
 
         /// <summary>
-        /// Returns first free index slot to be used
+        /// Returns the first unused index slot in the <see cref="Indexes"/> array.
         /// </summary>
+        /// <returns>An empty <see cref="CollectionIndex"/> ready for use.</returns>
         public CollectionIndex GetFreeIndex()
         {
             for (byte i = 0; i < this.Indexes.Length; i++)
@@ -158,8 +166,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get index from field name (index field name is case sensitive) - returns null if not found
+        /// Get the <see cref="CollectionIndex"/> for the given field name (case-sensitive). Returns null if not found.
         /// </summary>
+        /// <param name="field">The field name to look up.</param>
+        /// <returns>The matching index, or null if no index exists for the field.</returns>
         public CollectionIndex GetIndex(string field)
         {
             return this.Indexes.FirstOrDefault(x => x.Field == field);
@@ -171,8 +181,10 @@ namespace UltraLiteDB
         public CollectionIndex PK { get { return this.Indexes[0]; } }
 
         /// <summary>
-        /// Returns all used indexes
+        /// Returns all non-empty (used) indexes from this collection.
         /// </summary>
+        /// <param name="includePK">If true, includes the primary key index (slot 0); otherwise starts from slot 1.</param>
+        /// <returns>An enumeration of active <see cref="CollectionIndex"/> entries.</returns>
         public IEnumerable<CollectionIndex> GetIndexes(bool includePK)
         {
             return this.Indexes.Where(x => x.IsEmpty == false && x.Slot >= (includePK ? 0 : 1));

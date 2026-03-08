@@ -9,7 +9,9 @@ namespace UltraLiteDB
     public partial class UltraLiteEngine
     {
         /// <summary>
-        /// Try recovery data from current datafile into a new datafile.
+        /// Attempt to recover documents from a potentially corrupted data file into a new file.
+        /// Scans all data pages, deserializes documents, and inserts them into a "-recovery" copy.
+        /// Returns a log string with recovery count and any per-page/per-document errors.
         /// </summary>
         public static string Recovery(string filename)
         {
@@ -83,6 +85,9 @@ namespace UltraLiteDB
             return log.ToString();
         }
 
+        /// <summary>
+        /// Build a mapping of data page IDs to collection names by traversing collection pages and their indexes.
+        /// </summary>
         private static Dictionary<uint, string> RecoveryCollectionPages(UltraLiteEngine engine, HeaderPage header, StringBuilder log)
         {
             var result = new Dictionary<uint, string>();
@@ -124,6 +129,9 @@ namespace UltraLiteDB
             return result;
         }
 
+        /// <summary>
+        /// Starting from a set of index page IDs, crawl all linked index pages to discover which data page IDs belong to this collection.
+        /// </summary>
         private static HashSet<uint> RecoveryDetectCollectionByIndexPages(UltraLiteEngine engine, HashSet<uint> initialPagesID, StringBuilder log)
         {
             var indexPages = new Dictionary<uint, bool>();

@@ -5,6 +5,10 @@ using System.Collections.Generic;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Represents a BSON array — an ordered list of <see cref="BsonValue"/> elements.
+    /// Implements <see cref="IList{T}"/> for indexed access. Null items are stored as <see cref="BsonValue.Null"/>.
+    /// </summary>
     public class BsonArray : BsonValue, IList<BsonValue>
     {
         public BsonArray()

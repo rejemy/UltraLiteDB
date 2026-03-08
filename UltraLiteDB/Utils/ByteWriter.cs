@@ -4,63 +4,107 @@ using System.Buffers.Binary;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Writes primitive and extended data types sequentially into a byte buffer in little-endian format.
+    /// </summary>
     public class ByteWriter
     {
         private byte[] _buffer;
         private int _pos;
 
+        /// <summary>
+        /// Gets the underlying byte array being written to.
+        /// </summary>
         public byte[] Buffer { get { return _buffer; } }
 
+        /// <summary>
+        /// Gets or sets the current write position within the buffer.
+        /// </summary>
         public int Position { get { return _pos; } set { _pos = value; } }
 
 
+        /// <summary>
+        /// Initializes an empty <see cref="ByteWriter"/> with no backing buffer.
+        /// </summary>
         public ByteWriter()
         {
             _buffer = null;
             _pos = 0;
         }
 
+        /// <summary>
+        /// Initializes a <see cref="ByteWriter"/> with a new byte array of the specified length.
+        /// </summary>
+        /// <param name="length">The size of the byte array to allocate.</param>
         public ByteWriter(int length)
         {
             _buffer = new byte[length];
             _pos = 0;
         }
 
+        /// <summary>
+        /// Initializes a <see cref="ByteWriter"/> with an existing byte array and optional starting offset.
+        /// </summary>
+        /// <param name="buffer">The byte array to write into.</param>
+        /// <param name="offset">The starting position within the buffer (default: 0).</param>
         public ByteWriter(byte[] buffer, int offset = 0)
         {
             _buffer = buffer;
             _pos = offset;
         }
 
+        /// <summary>
+        /// Initializes a <see cref="ByteWriter"/> with the specified <see cref="ArraySegment{T}"/>, writing from its offset.
+        /// </summary>
+        /// <param name="buffer">The array segment to write into.</param>
         public ByteWriter(ArraySegment<byte> buffer)
         {
             _buffer = buffer.Array;
             _pos = buffer.Offset;
         }
 
+        /// <summary>
+        /// Clears the writer state, removing the buffer reference and resetting position to zero.
+        /// </summary>
         public void Clear()
         {
             _buffer = null;
             _pos = 0;
         }
 
+        /// <summary>
+        /// Resets the writer to use a new byte array, starting from position zero.
+        /// </summary>
+        /// <param name="buffer">The new byte array to write into.</param>
         public void Reset(byte[] buffer)
         {
             _buffer = buffer;
             _pos = 0;
         }
 
+        /// <summary>
+        /// Resets the writer to use a new <see cref="ArraySegment{T}"/>, starting from the segment's offset.
+        /// </summary>
+        /// <param name="buffer">The new array segment to write into.</param>
         public void Reset(ArraySegment<byte> buffer)
         {
             _buffer = buffer.Array;
             _pos = buffer.Offset;
         }
 
+        /// <summary>
+        /// Advances the write position by the specified number of bytes without writing data.
+        /// </summary>
+        /// <param name="length">The number of bytes to skip.</param>
         public void Skip(int length)
         {
             _pos += length;
         }
 
+        /// <summary>
+        /// Ensures the buffer has room for the specified number of additional bytes, growing it if necessary.
+        /// </summary>
+        /// <param name="additionalBytes">The number of additional bytes needed.</param>
         public void EnsureCapacity(int additionalBytes)
         {
             if (_buffer == null)

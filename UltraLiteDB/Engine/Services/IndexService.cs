@@ -4,13 +4,13 @@ using System.Collections.Generic;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Implement a Index service - Add/Remove index nodes on SkipList
-    /// Based on: http://igoro.com/archive/skip-lists-are-fascinating/
+    /// Skip-list based index service. Creates, inserts, deletes, and searches index nodes.
+    /// Each index is a probabilistic skip list with up to <see cref="IndexNode.MAX_LEVEL_LENGTH"/> levels.
     /// </summary>
     internal class IndexService
     {
         /// <summary>
-        /// Max size of a index entry - usde for string, binary, array and documents
+        /// Maximum byte size of an index key value (512 bytes).
         /// </summary>
         public const int MAX_INDEX_LENGTH = 512;
 
@@ -24,7 +24,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Create a new index and returns head page address (skip list)
+        /// Creates a new skip-list index with head (MinValue) and tail (MaxValue) sentinel nodes.
+        /// Returns the <see cref="CollectionIndex"/> metadata.
         /// </summary>
         public CollectionIndex CreateIndex(CollectionPage col)
         {
@@ -64,7 +65,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Insert a new node index inside an collection index. Flip coin to know level
+        /// Inserts a new index node with a randomly determined level (flip coin). Enforces unique constraints.
         /// </summary>
         public IndexNode AddNode(CollectionIndex index, BsonValue key, IndexNode last)
         {
@@ -83,7 +84,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Insert a new node index inside an collection index.
+        /// Core skip-list insertion: finds the correct position at each level and links the new node.
         /// </summary>
         private IndexNode AddNode(CollectionIndex index, BsonValue key, byte level, IndexNode last)
         {
@@ -189,7 +190,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Gets all node list from any index node (go forward and backward)
+        /// Traverses the doubly-linked node list (PrevNode/NextNode) in both directions from the given node.
         /// </summary>
         public IEnumerable<IndexNode> GetNodeList(IndexNode node, bool includeInitial)
         {
@@ -217,7 +218,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Deletes an indexNode from a Index and adjust Next/Prev nodes
+        /// Deletes an index node from the skip list, re-linking neighbors at all levels.
+        /// Deletes the index page if it becomes empty.
         /// </summary>
         public void Delete(CollectionIndex index, PageAddress nodeAddress)
         {
@@ -278,7 +280,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Drop all indexes pages. Each index use a single page sequence
+        /// Drops an entire index by deleting all its index pages and unlinking nodes from document node lists.
         /// </summary>
         public void DropIndex(CollectionIndex index)
         {
@@ -314,7 +316,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get a node inside a page using PageAddress - Returns null if address IsEmpty
+        /// Retrieves an <see cref="IndexNode"/> by its <see cref="PageAddress"/>. Returns null if the address is empty.
         /// </summary>
         public IndexNode GetNode(PageAddress address)
         {
@@ -324,7 +326,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Flip coin - skip list - returns level node (start in 1)
+        /// Probabilistic level selection for skip-list insertion. Returns a level from 1 to MAX_LEVEL_LENGTH.
         /// </summary>
         public byte FlipCoin()
         {
@@ -339,6 +341,9 @@ namespace UltraLiteDB
 
         #region Find
 
+        /// <summary>
+        /// Enumerates all index nodes (excluding head/tail sentinels) in the specified order.
+        /// </summary>
         public IEnumerable<IndexNode> FindAll(CollectionIndex index, int order)
         {
             var cur = this.GetNode(order == Query.Ascending ? index.HeadNode : index.TailNode);
@@ -355,8 +360,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Find first node that index match with value. If not found but sibling = true, returns near node (only non-unique index)
-        /// Before find, value must be normalized
+        /// Seeks to the first index node matching the value. If <paramref name="sibling"/> is true and no exact match exists,
+        /// returns the nearest node. For non-unique indexes, walks back to the first occurrence of the value.
         /// </summary>
         public IndexNode Find(CollectionIndex index, BsonValue value, bool sibling, int order)
         {
@@ -390,7 +395,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Goto the first/last occurrence of this index value
+        /// Walks to the boundary (first or last) occurrence of a duplicate key value.
         /// </summary>
         private IndexNode FindBoundary(CollectionIndex index, IndexNode cur, BsonValue value, int order, int level)
         {

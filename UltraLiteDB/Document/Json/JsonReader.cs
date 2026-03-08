@@ -7,7 +7,10 @@ using System.IO;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// A class that read a json string using a tokenizer (without regex)
+    /// Reads and deserializes JSON text into <see cref="BsonValue"/> instances using a
+    /// <see cref="Tokenizer"/>-based parser (no regular expressions). Supports JSON extended
+    /// data types such as <c>$oid</c>, <c>$date</c>, <c>$guid</c>, <c>$binary</c>,
+    /// <c>$numberLong</c>, and <c>$numberDecimal</c>.
     /// </summary>
     public class JsonReader
     {
@@ -15,8 +18,16 @@ namespace UltraLiteDB
 
         private Tokenizer _tokenizer = null;
 
+        /// <summary>
+        /// Gets the current character position in the input stream.
+        /// </summary>
         public long Position { get { return _tokenizer.Position; } }
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="JsonReader"/> that reads from the specified <see cref="TextReader"/>.
+        /// </summary>
+        /// <param name="reader">The <see cref="TextReader"/> containing JSON text to parse.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="reader"/> is null.</exception>
         public JsonReader(TextReader reader)
         {
             if (reader == null) throw new ArgumentNullException(nameof(reader));
@@ -24,11 +35,21 @@ namespace UltraLiteDB
             _tokenizer = new Tokenizer(reader);
         }
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="JsonReader"/> using an existing <see cref="Tokenizer"/>.
+        /// </summary>
+        /// <param name="tokenizer">The tokenizer to read tokens from.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="tokenizer"/> is null.</exception>
         internal JsonReader(Tokenizer tokenizer)
         {
             _tokenizer = tokenizer ?? throw new ArgumentNullException(nameof(tokenizer));
         }
 
+        /// <summary>
+        /// Deserializes the next JSON value from the input. Returns <see cref="BsonValue.Null"/> if
+        /// the end of input is reached.
+        /// </summary>
+        /// <returns>The deserialized <see cref="BsonValue"/>.</returns>
         public BsonValue Deserialize()
         {
             var token = _tokenizer.ReadToken();
@@ -40,6 +61,11 @@ namespace UltraLiteDB
             return value;
         }
 
+        /// <summary>
+        /// Deserializes a JSON array from the input, yielding each element lazily as a <see cref="BsonValue"/>.
+        /// Expects the input to start with an opening bracket (<c>[</c>).
+        /// </summary>
+        /// <returns>An <see cref="IEnumerable{BsonValue}"/> of the array elements.</returns>
         public IEnumerable<BsonValue> DeserializeArray()
         {
             var token = _tokenizer.ReadToken();
@@ -67,6 +93,13 @@ namespace UltraLiteDB
             yield break;
         }
 
+        /// <summary>
+        /// Reads and converts a single <see cref="Token"/> (and any subsequent tokens it implies)
+        /// into the corresponding <see cref="BsonValue"/>.
+        /// </summary>
+        /// <param name="token">The current token to interpret.</param>
+        /// <returns>The <see cref="BsonValue"/> represented by the token.</returns>
+        /// <exception cref="UltraLiteException">Thrown when an unexpected token is encountered.</exception>
         internal BsonValue ReadValue(Token token)
         {
             switch (token.Type)

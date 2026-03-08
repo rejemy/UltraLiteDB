@@ -3,7 +3,7 @@
 namespace UltraLiteDB
 {
     /// <summary>
-    /// All is an Index Scan operation
+    /// Returns all documents by scanning an index in the specified order. Used for unfiltered enumeration.
     /// </summary>
     internal class QueryAll : Query
     {

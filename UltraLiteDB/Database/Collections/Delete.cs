@@ -5,8 +5,10 @@ namespace UltraLiteDB
     public partial class UltraLiteCollection<T>
     {
         /// <summary>
-        /// Remove all document based on a Query object. Returns removed document counts
+        /// Deletes all documents matching a query.
         /// </summary>
+        /// <param name="query">The query to match documents for deletion. Requires an index on the queried field.</param>
+        /// <returns>The number of documents deleted.</returns>
         public int Delete(Query query)
         {
             if (query == null) throw new ArgumentNullException(nameof(query));
@@ -15,8 +17,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Remove an document in collection using Document Id - returns false if not found document
+        /// Deletes a single document by its _id value.
         /// </summary>
+        /// <param name="id">The _id of the document to delete.</param>
+        /// <returns>True if the document was found and deleted; false otherwise.</returns>
         public bool Delete(BsonValue id)
         {
             if (id == null || id.IsNull) throw new ArgumentNullException(nameof(id));

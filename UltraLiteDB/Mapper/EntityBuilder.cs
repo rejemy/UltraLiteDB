@@ -7,7 +7,9 @@ using System.Linq.Expressions;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Helper class to modify your entity mapping to document. Can be used instead attribute decorates
+    /// Fluent API for configuring how type <typeparamref name="T"/> maps to a <see cref="BsonDocument"/>.
+    /// An alternative to using <see cref="BsonIdAttribute"/>, <see cref="BsonFieldAttribute"/>, and other mapping attributes.
+    /// Obtain via <see cref="BsonMapper.Entity{T}"/>.
     /// </summary>
     public class EntityBuilder<T>
     {
@@ -21,7 +23,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Define which property will not be mapped to document
+        /// Excludes a property from the BSON mapping.
         /// </summary>
         public EntityBuilder<T> Ignore<K>(Expression<Func<T, K>> property)
         {
@@ -32,7 +34,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Define a custom name for a property when mapping to document
+        /// Maps a property to a custom BSON field name.
         /// </summary>
         public EntityBuilder<T> Field<K>(Expression<Func<T, K>> property, string field)
         {
@@ -45,8 +47,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Define which property is your document id (primary key). Define if this property supports auto-id
+        /// Designates a property as the document _id (primary key).
         /// </summary>
+        /// <param name="property">Expression selecting the property.</param>
+        /// <param name="autoId">If true, auto-generates _id values for empty/default values on insert.</param>
         public EntityBuilder<T> Id<K>(Expression<Func<T, K>> property, bool autoId = true)
         {
             return this.GetProperty(property, (p) =>

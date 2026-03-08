@@ -6,8 +6,11 @@ namespace UltraLiteDB
     public partial class UltraLiteEngine
     {
         /// <summary>
-        /// Reduce disk size re-arranging unused spaces. Can change password. If temporary disk was not provided, use MemoryStream temp disk
+        /// Compacts the database by copying all data to a temporary file, eliminating fragmentation.
+        /// Optionally changes the encryption password. Returns the number of bytes saved.
         /// </summary>
+        /// <param name="password">New password, or null to remove encryption.</param>
+        /// <param name="tempDisk">Temporary disk for the compacted copy; defaults to an in-memory stream.</param>
         public long Shrink(string password = null, IDiskService tempDisk = null)
         {
             var originalSize = _disk.FileLength;

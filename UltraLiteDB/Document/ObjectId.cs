@@ -7,7 +7,8 @@ using System.Threading;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Represent a 12-bytes BSON type used in document Id
+    /// A 12-byte unique identifier used as the default document _id type.
+    /// Layout: 4-byte timestamp + 3-byte machine hash + 2-byte PID + 3-byte auto-incrementing counter.
     /// </summary>
     public class ObjectId : IComparable<ObjectId>, IEquatable<ObjectId>
     {
@@ -194,7 +195,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Represent ObjectId as 12 bytes array
+        /// Writes the 12-byte ObjectId into the specified byte array at the given offset.
         /// </summary>
         public void ToByteArray(byte[] bytes, int startIndex)
         {

@@ -2,9 +2,14 @@
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Lexicographic byte array comparison extensions, used for binary BSON value ordering.
+    /// </summary>
     internal static class BinaryExtensions
     {
-        // https://code.google.com/p/freshbooks-api/source/browse/depend/NClassify.Generator/content/ByteArray.cs?r=bbb6c13ec7a01eae082796550f1ddc05f61694b8
+        /// <summary>
+        /// Lexicographically compare two byte arrays. Returns -1, 0, or 1.
+        /// </summary>
         public static int BinaryCompareTo(this byte[] lh, byte[] rh)
         {
             if (lh == null) return rh == null ? 0 : -1;
@@ -22,6 +27,9 @@ namespace UltraLiteDB
             return 1;
         }
 
+        /// <summary>
+        /// Lexicographically compare two ArraySegment byte spans. Returns -1, 0, or 1.
+        /// </summary>
         public static int BinaryCompareTo(this ArraySegment<byte> lh, ArraySegment<byte> rh)
         {
             if (lh.Array == null) return rh.Array == null ? 0 : -1;

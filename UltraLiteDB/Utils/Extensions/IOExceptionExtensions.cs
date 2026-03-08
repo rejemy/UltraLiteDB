@@ -3,6 +3,9 @@ using System.Runtime.InteropServices;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Extension methods for <see cref="IOException"/> to detect file lock violations and wait-retry.
+    /// </summary>
     internal static class IOExceptionExtensions
     {
         private const int ERROR_SHARING_VIOLATION = 32;
@@ -19,6 +22,9 @@ namespace UltraLiteDB
                 errorCode == ERROR_LOCK_VIOLATION;
         }
 
+        /// <summary>
+        /// If the exception is a file lock violation, wait the specified milliseconds. Otherwise, rethrow.
+        /// </summary>
         public static void WaitIfLocked(this IOException ex, int timer)
         {
             if (ex.IsLocked())

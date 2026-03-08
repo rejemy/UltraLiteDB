@@ -4,7 +4,8 @@ using System.Reflection;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// The main exception for LiteDB
+    /// Base exception type for all UltraLiteDB errors. Each error has a numeric <see cref="ErrorCode"/>
+    /// and static factory methods for common failure scenarios (index violations, lock timeouts, etc.).
     /// </summary>
     public class UltraLiteException : Exception
     {

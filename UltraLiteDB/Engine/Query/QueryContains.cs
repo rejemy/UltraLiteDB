@@ -4,7 +4,7 @@ using System.Linq;
 namespace UltraLiteDB
 {
 	/// <summary>
-	/// Contains query do not work with index, only full scan
+	/// Substring match query. Always performs an Index Scan since substring matching cannot use seek.
 	/// </summary>
 	internal class QueryContains : Query
     {

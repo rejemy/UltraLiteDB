@@ -7,7 +7,7 @@ namespace UltraLiteDB
     public partial class UltraLiteEngine
     {
         /// <summary>
-        /// Implement update command to a document inside a collection. Returns true if document was updated
+        /// Updates a single document in a collection by its _id. Returns true if the document was found and updated.
         /// </summary>
         public bool Update(string collection, BsonDocument doc)
         {
@@ -31,7 +31,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Implement update command to a document inside a collection. Return number of documents updated
+        /// Updates multiple documents in a collection. Returns the number of documents successfully updated.
         /// </summary>
         public int Update(string collection, IEnumerable<BsonDocument> docs)
         {
@@ -59,7 +59,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Implement internal update document
+        /// Core update logic: finds the document by _id, re-serializes it, updates data storage,
+        /// and reconciles all secondary index nodes (deleting stale keys, inserting new ones).
         /// </summary>
         private bool UpdateDocument(CollectionPage col, BsonDocument doc)
         {

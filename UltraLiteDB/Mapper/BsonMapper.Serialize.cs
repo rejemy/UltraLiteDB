@@ -9,8 +9,10 @@ namespace UltraLiteDB
     public partial class BsonMapper
     {
         /// <summary>
-        /// Serialize a entity class to BsonDocument
+        /// Serializes a .NET object to a <see cref="BsonDocument"/>. Returns the document as-is if already a <see cref="BsonDocument"/>.
         /// </summary>
+        /// <param name="type">The declared type of the entity (used for polymorphic type resolution).</param>
+        /// <param name="entity">The object to serialize.</param>
         public virtual BsonDocument ToDocument(Type type, object entity)
         {
             if (entity == null) throw new ArgumentNullException(nameof(entity));
@@ -22,13 +24,18 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Serialize a entity class to BsonDocument
+        /// Serializes a .NET object to a <see cref="BsonDocument"/>.
         /// </summary>
+        /// <typeparam name="T">The entity type.</typeparam>
         public virtual BsonDocument ToDocument<T>(T entity)
         {
             return this.ToDocument(typeof(T), entity);
         }
 
+        /// <summary>
+        /// Recursively serializes a .NET object to a <see cref="BsonValue"/>. Handles primitive types, custom serializers,
+        /// dictionaries, collections, and complex objects. Tracks depth to prevent infinite recursion.
+        /// </summary>
         internal BsonValue Serialize(Type type, object obj, int depth)
         {
             if (++depth > MAX_DEPTH) throw UltraLiteException.DocumentMaxDepth(MAX_DEPTH, type);
@@ -145,6 +152,9 @@ namespace UltraLiteDB
             return o;
         }
 
+        /// <summary>
+        /// Serializes a complex object to a <see cref="BsonDocument"/> using entity mapping.
+        /// </summary>
         public BsonDocument SerializeObject(object obj)
         {
             return SerializeObject(obj.GetType(), obj, 0);

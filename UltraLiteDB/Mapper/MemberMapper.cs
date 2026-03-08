@@ -3,57 +3,59 @@
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Internal representation for a .NET member mapped to BsonDocument
+    /// Describes how a single .NET property or field maps to a BSON document field.
+    /// Used by <see cref="EntityMapper"/> to drive serialization/deserialization.
     /// </summary>
     public class MemberMapper
     {
         /// <summary>
-        /// If member is Id, indicate that are AutoId
+        /// Whether this member should auto-generate an _id value on insert. Only relevant when <see cref="FieldName"/> is "_id".
         /// </summary>
         public bool AutoId { get; set; }
 
         /// <summary>
-        /// Member name
+        /// The CLR property/field name (e.g. "FirstName").
         /// </summary>
         public string MemberName { get; set; }
 
         /// <summary>
-        /// Member returns data type
+        /// The CLR type of this member (e.g. typeof(string), typeof(int)).
         /// </summary>
         public Type DataType { get; set; }
 
         /// <summary>
-        /// Converted document field name
+        /// The BSON document field name this member maps to (e.g. "first_name", "_id").
+        /// Set to null to exclude from mapping.
         /// </summary>
         public string FieldName { get; set; }
 
         /// <summary>
-        /// Delegate method to get value from entity instance
+        /// Delegate that reads this member's value from an entity instance.
         /// </summary>
         public GenericGetter Getter { get; set; }
 
         /// <summary>
-        /// Delegate method to set value to entity instance
+        /// Delegate that writes a value to this member on an entity instance.
         /// </summary>
         public GenericSetter Setter { get; set; }
 
         /// <summary>
-        /// When used, can be define a serialization function from entity class to bson value
+        /// Optional custom serialization function. When set, bypasses the default serialization logic for this member.
         /// </summary>
         public Func<object, BsonMapper, BsonValue> Serialize { get; set; }
 
         /// <summary>
-        /// When used, can define a deserialization function from bson value
+        /// Optional custom deserialization function. When set, bypasses the default deserialization logic for this member.
         /// </summary>
         public Func<BsonValue, BsonMapper, object> Deserialize { get; set; }
 
         /// <summary>
-        /// Indicate that this property contains an list of elements (IEnumerable)
+        /// Whether this member's type implements <see cref="IEnumerable"/> (arrays, lists, collections).
         /// </summary>
         public bool IsList { get; set; }
 
         /// <summary>
-        /// When property is an array of items, gets underlying type (otherwise is same type of PropertyType)
+        /// For collection types, the element type (e.g. typeof(int) for List&lt;int&gt;). For non-collection types, same as <see cref="DataType"/>.
         /// </summary>
         public Type UnderlyingType { get; set; }
     }

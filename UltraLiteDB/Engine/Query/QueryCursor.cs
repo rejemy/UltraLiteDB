@@ -4,7 +4,8 @@ using System.Collections.Generic;
 namespace UltraLiteDB
 {
 	/// <summary>
-	/// Include all components to be used in execution of a qery
+	/// Manages query execution state: iterates index nodes in batches, deserializes documents,
+	/// applies skip/limit pagination, and handles cache checkpoint boundaries.
 	/// </summary>
 	internal class QueryCursor : IDisposable
     {

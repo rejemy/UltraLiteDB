@@ -6,30 +6,35 @@ using System.Linq.Expressions;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Class to map entity class to BsonDocument
+    /// Describes how a CLR type maps to/from a <see cref="BsonDocument"/>.
+    /// Contains the list of <see cref="MemberMapper"/> entries for each mapped property/field.
     /// </summary>
     public class EntityMapper
     {
         /// <summary>
-        /// List all type members that will be mapped to/from BsonDocument
+        /// All mapped members (properties/fields) for this entity type.
         /// </summary>
         public List<MemberMapper> Members { get; set; }
 
         /// <summary>
-        /// Indicate which member is _id
+        /// Gets the member mapped to the "_id" field, or null if no _id member exists.
         /// </summary>
         public MemberMapper Id { get { return this.Members.SingleOrDefault(x => x.FieldName == "_id"); } }
 
         /// <summary>
-        /// Indicate which Type this entity mapper is
+        /// The CLR type this mapper describes.
         /// </summary>
         public Type ForType { get; set; }
 
         /// <summary>
-        /// Cached lookup from BSON field name to MemberMapper for O(1) access during deserialization
+        /// Lazily-built lookup from BSON field name to <see cref="MemberMapper"/> for O(1) access during deserialization.
+        /// Keys are case-insensitive.
         /// </summary>
         private Dictionary<string, MemberMapper> _fieldLookup;
 
+        /// <summary>
+        /// Gets the field-name-to-member lookup dictionary, building it on first access.
+        /// </summary>
         public Dictionary<string, MemberMapper> FieldLookup
         {
             get
@@ -49,7 +54,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Resolve expression to get member mapped
+        /// Finds a <see cref="MemberMapper"/> by resolving the member path from a LINQ expression.
         /// </summary>
         public MemberMapper GetMember(Expression expr)
         {

@@ -4,8 +4,8 @@ using System.IO;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Implement generic Stream disk service. Used for any read/write/seek stream
-    /// No journal implemented
+    /// Stream-based <see cref="IDiskService"/> implementation that reads/writes pages to any seekable <see cref="Stream"/>.
+    /// Does not support journaling or flush — suitable for in-memory streams or scenarios where crash recovery is not needed.
     /// </summary>
     public class StreamDiskService : IDiskService
     {

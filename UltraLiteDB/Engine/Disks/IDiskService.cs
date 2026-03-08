@@ -3,51 +3,55 @@ using System.Collections.Generic;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Abstraction over physical storage for the database engine. Implementations handle
+    /// reading/writing pages and optional write-ahead journal support for crash recovery.
+    /// </summary>
     public interface IDiskService : IDisposable
     {
         /// <summary>
-        /// Open data file (creating if doest exists) and return header content bytes
+        /// Open or create the data file and initialize internal streams. Must be called before any read/write operations.
         /// </summary>
         void Initialize(Logger log, string password);
 
         /// <summary>
-        /// Read a page from disk datafile
+        /// Read a single page (BasePage.PAGE_SIZE bytes) from the data file.
         /// </summary>
         byte[] ReadPage(uint pageID);
 
         /// <summary>
-        /// Write a page in disk datafile
+        /// Write a single page (BasePage.PAGE_SIZE bytes) to the data file.
         /// </summary>
         void WritePage(uint pageID, byte[] buffer);
 
         /// <summary>
-        /// Set datafile length before start writing in disk
+        /// Pre-allocate the data file to the specified length before writing new pages.
         /// </summary>
         void SetLength(long fileSize);
 
         /// <summary>
-        /// Gets file length in bytes
+        /// Gets the current data file length in bytes.
         /// </summary>
         long FileLength { get; }
 
 
         /// <summary>
-        /// Get if journal are enabled or not. Can optimize with has no jounal
+        /// Whether this disk service supports write-ahead journaling. When false, the engine skips journal I/O.
         /// </summary>
         bool IsJournalEnabled { get; }
 
         /// <summary>
-        /// Read journal file returning IEnumerable of pages
+        /// Read all pages from the journal file for crash recovery. Returns raw page buffers in write order.
         /// </summary>
         IEnumerable<byte[]> ReadJournal(uint lastPageID);
 
         /// <summary>
-        /// Write original bytes page in a journal file (in sequence) - if journal not exists, create.
+        /// Write original (pre-modification) page bytes to the journal file for rollback support. Creates the journal if it does not exist.
         /// </summary>
         void WriteJournal(ICollection<byte[]> pages, uint lastPageID);
 
         /// <summary>
-        /// Clear journal file
+        /// Delete or truncate the journal file after a successful commit.
         /// </summary>
         void ClearJournal(uint lastPageID);
 

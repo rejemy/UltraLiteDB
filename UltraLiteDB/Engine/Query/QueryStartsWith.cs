@@ -3,6 +3,9 @@ using System.Linq;
 
 namespace UltraLiteDB
 {
+	/// <summary>
+	/// String prefix query. Uses Index Seek to find the first matching node, then walks forward while the prefix matches.
+	/// </summary>
 	internal class QueryStartsWith : Query
     {
         private BsonValue _value;

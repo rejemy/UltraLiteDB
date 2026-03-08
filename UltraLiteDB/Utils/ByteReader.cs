@@ -4,14 +4,23 @@ using System.Buffers.Binary;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Reads primitive and extended data types sequentially from a byte buffer in little-endian format.
+    /// </summary>
     public class ByteReader
     {
         private byte[] _buffer;
         private int _length;
         private int _pos;
 
+        /// <summary>
+        /// Gets or sets the current read position within the buffer.
+        /// </summary>
         public int Position { get { return _pos; } set { _pos = value; } }
 
+        /// <summary>
+        /// Initializes an empty <see cref="ByteReader"/> with no backing buffer.
+        /// </summary>
          public ByteReader()
         {
             _buffer = null;
@@ -19,6 +28,11 @@ namespace UltraLiteDB
             _pos = 0;
         }
 
+        /// <summary>
+        /// Initializes a <see cref="ByteReader"/> with the specified byte array and optional starting offset.
+        /// </summary>
+        /// <param name="buffer">The byte array to read from.</param>
+        /// <param name="offset">The starting position within the buffer (default: 0).</param>
         public ByteReader(byte[] buffer, int offset = 0)
         {
             _buffer = buffer;
@@ -26,6 +40,10 @@ namespace UltraLiteDB
             _pos = offset;
         }
 
+        /// <summary>
+        /// Initializes a <see cref="ByteReader"/> with the specified <see cref="ArraySegment{T}"/>, reading within its bounds.
+        /// </summary>
+        /// <param name="buffer">The array segment to read from.</param>
         public ByteReader(ArraySegment<byte> buffer)
         {
             _buffer = buffer.Array;
@@ -33,6 +51,9 @@ namespace UltraLiteDB
             _pos = buffer.Offset;
         }
 
+        /// <summary>
+        /// Clears the reader state, removing the buffer reference and resetting position to zero.
+        /// </summary>
         public void Clear()
         {
             _buffer = null;
@@ -40,6 +61,10 @@ namespace UltraLiteDB
             _pos = 0;
         }
 
+        /// <summary>
+        /// Resets the reader to use a new byte array, starting from position zero.
+        /// </summary>
+        /// <param name="buffer">The new byte array to read from.</param>
         public void Reset(byte[] buffer)
         {
             _buffer = buffer;
@@ -47,6 +72,10 @@ namespace UltraLiteDB
             _pos = 0;
         }
 
+        /// <summary>
+        /// Resets the reader to use a new <see cref="ArraySegment{T}"/>, starting from the segment's offset.
+        /// </summary>
+        /// <param name="buffer">The new array segment to read from.</param>
         public void Reset(ArraySegment<byte> buffer)
         {
             _buffer = buffer.Array;
@@ -54,6 +83,10 @@ namespace UltraLiteDB
             _pos = buffer.Offset;
         }
 
+        /// <summary>
+        /// Advances the read position by the specified number of bytes without reading data.
+        /// </summary>
+        /// <param name="length">The number of bytes to skip.</param>
         public void Skip(int length)
         {
             _pos += length;
@@ -158,6 +191,10 @@ namespace UltraLiteDB
 
         #region Extended types
 
+        /// <summary>
+        /// Reads a length-prefixed UTF-8 string (4-byte Int32 length prefix followed by string bytes).
+        /// </summary>
+        /// <returns>The decoded string.</returns>
         public string ReadString()
         {
             var length = this.ReadInt32();
@@ -167,6 +204,11 @@ namespace UltraLiteDB
             return str;
         }
 
+        /// <summary>
+        /// Reads a UTF-8 string of the specified byte length from the buffer.
+        /// </summary>
+        /// <param name="length">The number of bytes to read as a string.</param>
+        /// <returns>The decoded string.</returns>
         public string ReadString(int length)
         {
             var str = Encoding.UTF8.GetString(_buffer, _pos, length);
@@ -176,8 +218,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Read BSON string add \0x00 at and of string and add this char in length before
+        /// Reads a BSON-encoded string, which includes a 4-byte length prefix and a trailing null terminator (0x00).
+        /// The length prefix includes the null terminator byte.
         /// </summary>
+        /// <returns>The decoded string without the null terminator.</returns>
         public string ReadBsonString()
         {
             var length = this.ReadInt32();
@@ -187,6 +231,10 @@ namespace UltraLiteDB
             return str;
         }
 
+        /// <summary>
+        /// Reads a null-terminated C-style string (CString) from the buffer.
+        /// </summary>
+        /// <returns>The decoded string, or "_" if end of buffer is reached without finding null terminator.</returns>
         public string ReadCString()
         {
             var pos = _pos;

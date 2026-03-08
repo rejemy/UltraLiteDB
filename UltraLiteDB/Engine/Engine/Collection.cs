@@ -7,8 +7,9 @@ namespace UltraLiteDB
     public partial class UltraLiteEngine
     {
         /// <summary>
-        /// Returns all collection inside datafile
+        /// Returns all collection names stored in the database header page.
         /// </summary>
+        /// <returns>An enumerable of collection name strings.</returns>
         public IEnumerable<string> GetCollectionNames()
         {
 
@@ -19,8 +20,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Drop collection including all documents, indexes and extended pages
+        /// Drops a collection including all its documents, indexes, and extended pages.
         /// </summary>
+        /// <param name="collection">The collection name to drop.</param>
+        /// <returns><c>true</c> if the collection was found and dropped; <c>false</c> if it did not exist.</returns>
         public bool DropCollection(string collection)
         {
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));
@@ -38,8 +41,11 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Rename a collection
+        /// Renames a collection. Throws if <paramref name="newName"/> already exists.
         /// </summary>
+        /// <param name="collection">The current collection name.</param>
+        /// <param name="newName">The new collection name.</param>
+        /// <returns><c>true</c> if the collection was found and renamed; <c>false</c> if it did not exist.</returns>
         public bool RenameCollection(string collection, string newName)
         {
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));

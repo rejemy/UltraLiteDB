@@ -3,6 +3,10 @@ using System.Collections.Generic;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// The first page (PageID 0) in the database file. Stores global metadata including the file format
+    /// version, encryption settings, collection page references, and the free empty page list head.
+    /// </summary>
     internal class HeaderPage : BasePage
     {
         /// <summary>

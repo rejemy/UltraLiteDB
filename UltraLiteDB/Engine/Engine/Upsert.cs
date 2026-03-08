@@ -6,9 +6,8 @@ namespace UltraLiteDB
     public partial class UltraLiteEngine
     {
         /// <summary>
-        /// Implement upsert command to documents in a collection. Calls update on all documents,
-        /// then any documents not updated are then attempted to insert.
-        /// This will have the side effect of throwing if duplicate items are attempted to be inserted. Returns true if document is inserted
+        /// Inserts or updates a single document. Attempts update first; if the document has no _id or is not found, inserts it.
+        /// Returns true if the document was inserted (false if updated).
         /// </summary>
         public bool Upsert(string collection, BsonDocument doc, BsonAutoId autoId = BsonAutoId.ObjectId)
         {
@@ -33,9 +32,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Implement upsert command to documents in a collection. Calls update on all documents,
-        /// then any documents not updated are then attempted to insert.
-        /// This will have the side effect of throwing if duplicate items are attempted to be inserted.
+        /// Inserts or updates multiple documents. Returns the count of documents that were inserted (not updated).
         /// </summary>
         public int Upsert(string collection, IEnumerable<BsonDocument> docs, BsonAutoId autoId = BsonAutoId.ObjectId)
         {

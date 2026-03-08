@@ -4,7 +4,8 @@ using System.Linq;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Manages all transactions and grantees concurrency and recovery
+    /// Manages write transactions: checkpointing dirty pages to disk, journal-based crash recovery,
+    /// and cache eviction when memory limits are reached.
     /// </summary>
     internal class TransactionService
     {
@@ -26,10 +27,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Checkpoint is a safe point to clear cache pages without loose pages references.
-        /// Is called after each document insert/update/deleted/indexed/fetch from query
-        /// Clear only clean pages - do not clear dirty pages (transaction)
-        /// Return true if cache was clear
+        /// Evicts clean pages from cache when usage exceeds the configured limit.
+        /// Called after each document operation to bound memory usage. Returns true if pages were evicted.
         /// </summary>
         public bool CheckPoint()
         {
@@ -46,7 +45,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Save all dirty pages to disk
+        /// Flushes all dirty pages to disk. Writes the journal first (if enabled), then the data pages,
+        /// then clears the recovery flag. Ensures crash-safe writes via write-ahead journaling.
         /// </summary>
         public void PersistDirtyPages()
         {
@@ -130,7 +130,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get journal pages and override all into datafile
+        /// Restores the data file from the journal after a crash. Reads journal pages and writes them
+        /// back to their original positions in the data file.
         /// </summary>
         public void Recovery()
         {

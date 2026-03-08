@@ -6,8 +6,10 @@ namespace UltraLiteDB
     public partial class UltraLiteCollection<T>
     {
         /// <summary>
-        /// Insert or Update a document in this collection.
+        /// Inserts the document if its _id doesn't exist, otherwise updates it.
         /// </summary>
+        /// <param name="document">The entity to insert or update.</param>
+        /// <returns>True if the document was inserted; false if it was updated.</returns>
         public bool Upsert(T document)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
@@ -16,8 +18,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Insert or Update all documents
+        /// Inserts or updates multiple documents.
         /// </summary>
+        /// <param name="documents">The entities to upsert.</param>
+        /// <returns>The number of documents inserted (not updated).</returns>
         public int Upsert(IEnumerable<T> documents)
         {
             if (documents == null) throw new ArgumentNullException(nameof(documents));
@@ -26,8 +30,11 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Insert or Update a document in this collection.
+        /// Inserts or updates a document using an explicit _id value.
         /// </summary>
+        /// <param name="id">The _id to assign to the document.</param>
+        /// <param name="document">The entity to insert or update.</param>
+        /// <returns>True if the document was inserted; false if it was updated.</returns>
         public bool Upsert(BsonValue id, T document)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));

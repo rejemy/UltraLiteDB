@@ -2,12 +2,18 @@
 
 namespace UltraLiteDB
 {
+	/// <summary>
+	/// Pairs a sort key with its document, used internally during query result sorting.
+	/// </summary>
 	internal class KeyDocument
     {
         public BsonValue Key { get; set; }
         public BsonDocument Document { get; set; }
     }
 
+    /// <summary>
+    /// Compares <see cref="KeyDocument"/> instances by their <see cref="KeyDocument.Key"/> value.
+    /// </summary>
     internal class KeyDocumentComparer : IComparer<KeyDocument>
     {
         public int Compare(KeyDocument x, KeyDocument y)

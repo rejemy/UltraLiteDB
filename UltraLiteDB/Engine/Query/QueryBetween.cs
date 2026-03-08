@@ -3,6 +3,10 @@ using System.Linq;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Range query that matches field values between start and end bounds (inclusive/exclusive configurable).
+    /// Uses Index Seek to find the start position and walks the index forward.
+    /// </summary>
     internal class QueryBetween : Query
     {
         private BsonValue _start;

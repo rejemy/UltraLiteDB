@@ -3,6 +3,10 @@ using System.IO;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Manages document storage in <see cref="DataPage"/>s. Handles insert, update, read, and delete
+    /// of data blocks, including overflow to <see cref="ExtendPage"/>s for large documents.
+    /// </summary>
     internal class DataService
     {
         private PageService _pager;
@@ -15,7 +19,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Insert data inside a datapage. Returns dataPageID that indicates the first page
+        /// Inserts serialized document bytes into a data page. Uses <see cref="ExtendPage"/> if the data exceeds one page.
+        /// Returns the created <see cref="DataBlock"/>.
         /// </summary>
         public DataBlock Insert(CollectionPage col, byte[] data)
         {
@@ -59,7 +64,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Update data inside a datapage. If new data can be used in same datapage, just update. Otherwise, copy content to a new ExtendedPage
+        /// Updates a data block's content. If the new data fits in the existing page, updates in-place;
+        /// otherwise overflows to an <see cref="ExtendPage"/>.
         /// </summary>
         public DataBlock Update(CollectionPage col, PageAddress blockAddress, byte[] data)
         {
@@ -112,7 +118,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Read all data from datafile using a pageID as reference. If data is not in DataPage, read from ExtendPage.
+        /// Reads the full byte content of a document by its block address. Reads from <see cref="ExtendPage"/> if the data overflows.
         /// </summary>
         public byte[] Read(PageAddress blockAddress)
         {
@@ -128,7 +134,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get a data block from a DataPage using address
+        /// Gets a <see cref="DataBlock"/> from a <see cref="DataPage"/> by its <see cref="PageAddress"/>.
         /// </summary>
         public DataBlock GetBlock(PageAddress blockAddress)
         {
@@ -137,7 +143,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Read all data from a extended page with all subsequences pages if exits
+        /// Reads all bytes from a chain of <see cref="ExtendPage"/>s, concatenating them into a single byte array.
         /// </summary>
         public byte[] ReadExtendData(uint extendPageID)
         {
@@ -154,7 +160,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Delete one dataBlock
+        /// Deletes a data block and its extend pages. Removes the data page if it becomes empty.
+        /// Decrements the collection's document count.
         /// </summary>
         public DataBlock Delete(CollectionPage col, PageAddress blockAddress)
         {
@@ -197,7 +204,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Store all bytes in one extended page. If data ir bigger than a page, store in more pages and make all in sequence
+        /// Writes byte data across one or more chained <see cref="ExtendPage"/>s. Creates new pages as needed
+        /// and cleans up any surplus pages from previous writes.
         /// </summary>
         public void StoreExtendData(ExtendPage page, byte[] data)
         {

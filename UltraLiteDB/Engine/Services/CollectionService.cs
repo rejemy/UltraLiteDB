@@ -4,6 +4,10 @@ using System.Linq;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Manages collection lifecycle: creating, retrieving, listing, and dropping collections.
+    /// Coordinates with <see cref="PageService"/>, <see cref="IndexService"/>, and the header page.
+    /// </summary>
     internal class CollectionService
     {
         private PageService _pager;
@@ -22,7 +26,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get a exist collection. Returns null if not exists
+        /// Gets a collection page by name. Returns null if the collection does not exist.
         /// </summary>
         public CollectionPage Get(string name)
         {
@@ -41,7 +45,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Add a new collection. Check if name the not exists
+        /// Creates a new collection with a _id primary key index. Validates name format and collection count limits.
         /// </summary>
         public CollectionPage Add(string name)
         {
@@ -80,7 +84,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get all collections pages
+        /// Enumerates all collection pages in the database.
         /// </summary>
         public IEnumerable<CollectionPage> GetAll()
         {
@@ -93,7 +97,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Drop a collection - remove all data pages + indexes pages
+        /// Drops a collection by deleting all its data pages, index pages, extend pages, and the collection page itself.
         /// </summary>
         public void Drop(CollectionPage col)
         {

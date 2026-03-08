@@ -6,6 +6,11 @@ using System.Linq;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Writes <see cref="BsonValue"/> instances as JSON text to a <see cref="TextWriter"/>.
+    /// Supports pretty-printing with configurable indentation and encodes extended BSON data types
+    /// (e.g., <c>$oid</c>, <c>$date</c>, <c>$binary</c>) using the JSON extended format.
+    /// </summary>
     public class JsonWriter
     {
         private readonly static IFormatProvider _numberFormat = CultureInfo.InvariantCulture.NumberFormat;
@@ -15,23 +20,29 @@ namespace UltraLiteDB
         private string _spacer = "";
 
         /// <summary>
-        /// Get/Set indent size
+        /// Gets or sets the number of spaces per indentation level when <see cref="Pretty"/> is enabled. Default is 4.
         /// </summary>
         public int Indent { get; set; } = 4;
 
         /// <summary>
-        /// Get/Set if writer must print pretty (with new line/indent)
+        /// Gets or sets whether the writer outputs formatted JSON with newlines and indentation. Default is <c>false</c>.
         /// </summary>
         public bool Pretty { get; set; } = false;
 
+        /// <summary>
+        /// Initializes a new instance of <see cref="JsonWriter"/> that writes JSON output to the specified <see cref="TextWriter"/>.
+        /// </summary>
+        /// <param name="writer">The <see cref="TextWriter"/> to write JSON output to.</param>
         public JsonWriter(TextWriter writer)
         {
             _writer = writer;
         }
 
         /// <summary>
-        /// Serialize value into text writer
+        /// Serializes a <see cref="BsonValue"/> as JSON to the underlying <see cref="TextWriter"/>.
+        /// Resets indentation state before writing.
         /// </summary>
+        /// <param name="value">The <see cref="BsonValue"/> to serialize. If null, <see cref="BsonValue.Null"/> is used.</param>
         public void Serialize(BsonValue value)
         {
             _indent = 0;

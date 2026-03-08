@@ -5,12 +5,13 @@ using System.IO;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Implement NTFS File disk
+    /// File-based <see cref="IDiskService"/> implementation that reads/writes pages to a physical file on disk.
+    /// Supports write-ahead journaling (appended to the end of the data file) and configurable file options.
     /// </summary>
     public class FileDiskService : IDiskService
     {
         /// <summary>
-        /// Position, on page, about page type
+        /// Byte offset within a page buffer where the <see cref="PageType"/> byte is stored.
         /// </summary>
         private const int PAGE_TYPE_POSITION = 4;
 
@@ -229,7 +230,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Shrink datafile to crop journal area
+        /// Truncate the data file to remove the appended journal area after successful recovery or commit.
         /// </summary>
         public void ClearJournal(uint lastPageID)
         {

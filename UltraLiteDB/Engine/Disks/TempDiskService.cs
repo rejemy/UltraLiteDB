@@ -5,7 +5,8 @@ using System.IO;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Implement temporary disk access. Open datafile only when be used and delete when dispose. No journal, no sharing
+    /// Temporary file-based <see cref="IDiskService"/> that lazily creates a temp file on first use and deletes it on dispose.
+    /// Used internally for sort operations that exceed memory. No journaling or file sharing support.
     /// </summary>
     public class TempDiskService : IDiskService
     {
@@ -28,6 +29,9 @@ namespace UltraLiteDB
             // datafile will be created only when used
         }
 
+        /// <summary>
+        /// Lazily creates the temporary file and opens a FileStream to it.
+        /// </summary>
         private void InternalInitialize()
         {
             // create a temp filename in temp directory

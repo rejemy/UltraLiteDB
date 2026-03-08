@@ -3,16 +3,16 @@ using System.Collections.Generic;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// In-memory page cache that separates clean (read-only) and dirty (modified) pages.
+    /// Thread-safe for concurrent read/write access.
+    /// </summary>
     internal class CacheService
     {
-        /// <summary>
-        /// Collection to store clean only pages in cache
-        /// </summary>
+        /// <summary>Clean (unmodified) pages cached from disk reads.</summary>
         private Dictionary<uint, BasePage> _clean = new Dictionary<uint, BasePage>();
 
-        /// <summary>
-        /// Collection to store dirty only pages in cache. If page was in _clean, remove from there and insert here
-        /// </summary>
+        /// <summary>Dirty (modified) pages pending write to disk. Pages move here from _clean when modified.</summary>
         private Dictionary<uint, BasePage> _dirty = new Dictionary<uint, BasePage>();
 
         private Logger _log;
@@ -23,8 +23,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get a page from cache or from disk (and put on cache)
-        /// [ThreadSafe]
+        /// Gets a page from the dirty or clean cache. Returns null if not cached. Thread-safe.
         /// </summary>
         public BasePage GetPage(uint pageID)
         {
@@ -39,8 +38,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Add page to cache
-        /// [ThreadSafe]
+        /// Adds a clean page to the cache. Thread-safe.
         /// </summary>
         public void AddPage(BasePage page)
         {
@@ -53,10 +51,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Set a page as dirty and ensure page are in cache. Should be used after any change on page 
-        /// Do not use on end of method because page can be deleted/change type
-        /// Always remove from clean list and add in dirty list
-        /// [ThreadSafe]
+        /// Marks a page as dirty, moving it from the clean cache to the dirty cache. Thread-safe.
         /// </summary>
         public void SetDirty(BasePage page)
         {
@@ -69,8 +64,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Return all dirty pages
-        /// [ThreadSafe]
+        /// Returns all dirty pages for flushing to disk.
         /// </summary>
         public ICollection<BasePage> GetDirtyPages()
         {
@@ -78,18 +72,17 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get how many pages are in clean cache
+        /// Number of clean pages currently cached.
         /// </summary>
         public int CleanUsed { get { return _clean.Count; } }
 
         /// <summary>
-        /// Get how many pages are in dirty cache
+        /// Number of dirty pages pending write.
         /// </summary>
         public int DirtyUsed { get { return _dirty.Count; } }
 
         /// <summary>
-        /// Discard only dirty pages
-        /// [ThreadSafe]
+        /// Discards all dirty pages (used on transaction rollback). Thread-safe.
         /// </summary>
         public void DiscardDirtyPages()
         {
@@ -102,8 +95,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Mark all dirty pages now as clean pages and transfer to clean collection
-        /// [ThreadSafe]
+        /// Promotes all dirty pages to clean status after a successful flush. Thread-safe.
         /// </summary>
         public void MarkDirtyAsClean()
         {
@@ -120,8 +112,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Remove from cache all clean pages
-        /// [Non - ThreadSafe]
+        /// Evicts all clean pages from cache to free memory. Thread-safe.
         /// </summary>
         public void ClearPages()
         {

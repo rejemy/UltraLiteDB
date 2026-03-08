@@ -5,12 +5,13 @@ using System.Text;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Internal class to serialize a BsonDocument to BSON data format (byte[])
+    /// Serializes <see cref="BsonDocument"/> and <see cref="BsonArray"/> objects into binary BSON format.
+    /// Uses <see cref="ByteWriter"/> for efficient byte output.
     /// </summary>
     public static class BsonWriter
     {
         /// <summary>
-        /// Main method - serialize document. Uses ByteWriter
+        /// Serializes a <see cref="BsonDocument"/> into a new byte array.
         /// </summary>
         public static byte[] Serialize(BsonDocument doc)
         {
@@ -22,6 +23,10 @@ namespace UltraLiteDB
             return writer.Buffer;
         }
 
+        /// <summary>
+        /// Serializes a <see cref="BsonDocument"/> into an existing byte array at the specified offset.
+        /// </summary>
+        /// <returns>The writer position after serialization.</returns>
         public static int SerializeTo(BsonDocument doc, byte[] array, int offset = 0)
         {
             var writer = new ByteWriter(array);
@@ -33,7 +38,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Write a bson document
+        /// Writes a BSON document (length prefix + elements + 0x00 terminator) to the writer.
         /// </summary>
         public static void WriteDocument(ByteWriter writer, BsonDocument doc)
         {
@@ -47,6 +52,9 @@ namespace UltraLiteDB
             writer.Write((byte)0x00);
         }
 
+        /// <summary>
+        /// Writes a BSON array (length prefix + indexed elements + 0x00 terminator) to the writer.
+        /// </summary>
         public static void WriteArray(ByteWriter writer, BsonArray array)
         {
             writer.Write(array.GetBytesCount(false));

@@ -3,8 +3,8 @@
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Represent a extra data page that contains the object when is not possible store in DataPage (bigger then  PAGE_SIZE or on update has no more space on page)
-    /// Can be used in sequence of pages to store big objects
+    /// Stores overflow document data that does not fit in a <see cref="DataPage"/>. Multiple extend pages
+    /// are chained via <see cref="BasePage.NextPageID"/> to hold arbitrarily large documents.
     /// </summary>
     internal class ExtendPage : BasePage
     {
@@ -18,6 +18,10 @@ namespace UltraLiteDB
         /// </summary>
         private byte[] _data = new byte[0];
 
+        /// <summary>
+        /// Initializes a new extend page with the given page identifier.
+        /// </summary>
+        /// <param name="pageID">The page identifier to assign.</param>
         public ExtendPage(uint pageID)
             : base(pageID)
         {

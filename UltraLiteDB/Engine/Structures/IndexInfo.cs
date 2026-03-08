@@ -1,7 +1,7 @@
 ﻿namespace UltraLiteDB
 {
 	/// <summary>
-	/// Represent a index information
+	/// Public read-only view of a collection index's metadata, returned by <see cref="UltraLiteEngine.GetIndexes"/>.
 	/// </summary>
 	public class IndexInfo
     {
@@ -14,22 +14,22 @@
         }
 
         /// <summary>
-        /// Slot number of index
+        /// Slot position (0–15) in the collection's index array.
         /// </summary>
         public int Slot { get; private set; }
 
         /// <summary>
-        /// Field index name
+        /// The indexed field name.
         /// </summary>
         public string Field { get; private set; }
 
         /// <summary>
-        /// Index is Unique?
+        /// Whether this index enforces unique values.
         /// </summary>
         public bool Unique { get; private set; }
 
         /// <summary>
-        /// Indicate max level used in skip-list
+        /// Maximum skip-list level currently in use.
         /// </summary>
         public byte MaxLevel { get; private set; }
     }

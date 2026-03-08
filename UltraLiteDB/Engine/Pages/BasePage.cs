@@ -2,8 +2,16 @@
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Identifies the type of content stored in a <see cref="BasePage"/>.
+    /// </summary>
     public enum PageType { Empty = 0, Header = 1, Collection = 2, Index = 3, Data = 4, Extend = 5 }
 
+    /// <summary>
+    /// Base class for all page types in the database file. Each page is a fixed-size block
+    /// (<see cref="PAGE_SIZE"/> bytes) that stores a common header and type-specific content.
+    /// Pages are linked via <see cref="PrevPageID"/>/<see cref="NextPageID"/> to form sequences.
+    /// </summary>
     internal abstract class BasePage
     {
         #region Page Constants
@@ -68,6 +76,10 @@ namespace UltraLiteDB
         /// </summary>
         public byte[] DiskData { get; set; }
 
+        /// <summary>
+        /// Initializes a new page with default empty state.
+        /// </summary>
+        /// <param name="pageID">The unique page identifier.</param>
         public BasePage(uint pageID)
         {
             this.PageID = pageID;
@@ -79,18 +91,20 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns a size of specified number of pages
+        /// Returns the total byte size for the specified number of pages.
         /// </summary>
-        /// <param name="pageCount">The page count</param>
+        /// <param name="pageCount">The number of pages.</param>
+        /// <returns>Total size in bytes.</returns>
         public static long GetSizeOfPages(uint pageCount)
         {
             return checked((long)pageCount * BasePage.PAGE_SIZE);
         }
 
         /// <summary>
-        /// Returns a size of specified number of pages
+        /// Returns the total byte size for the specified number of pages.
         /// </summary>
-        /// <param name="pageCount">The page count</param>
+        /// <param name="pageCount">The number of pages. Must be non-negative.</param>
+        /// <returns>Total size in bytes.</returns>
         public static long GetSizeOfPages(int pageCount)
         {
             if (pageCount < 0) throw new ArgumentOutOfRangeException("pageCount", "Could not be less than 0.");
@@ -101,8 +115,11 @@ namespace UltraLiteDB
         #region Read/Write page
 
         /// <summary>
-        /// Create a new instance of page based on T type
+        /// Create a new empty page instance based on the generic page type <typeparamref name="T"/>.
         /// </summary>
+        /// <typeparam name="T">The concrete page type to create.</typeparam>
+        /// <param name="pageID">The page identifier to assign.</param>
+        /// <returns>A new instance of the specified page type.</returns>
         public static T CreateInstance<T>(uint pageID)
             where T : BasePage
         {
@@ -120,8 +137,11 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Create a new instance of page based on PageType
+        /// Create a new empty page instance based on the specified <see cref="PageType"/>.
         /// </summary>
+        /// <param name="pageID">The page identifier to assign.</param>
+        /// <param name="pageType">The type of page to create.</param>
+        /// <returns>A new instance of the appropriate page subclass.</returns>
         public static BasePage CreateInstance(uint pageID, PageType pageType)
         {
             switch (pageType)
@@ -137,8 +157,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Read a page with correct instance page object. Checks for pageType
+        /// Deserialize a page from a raw byte buffer, creating the correct page subclass based on the embedded page type.
         /// </summary>
+        /// <param name="buffer">A byte array of <see cref="PAGE_SIZE"/> length containing the serialized page.</param>
+        /// <returns>A fully populated page instance.</returns>
         public static BasePage ReadPage(byte[] buffer)
         {
             var reader = new ByteReader(buffer);
@@ -162,8 +184,9 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Write a page to byte array
+        /// Serialize this page to a byte array of <see cref="PAGE_SIZE"/> length, updating <see cref="DiskData"/>.
         /// </summary>
+        /// <returns>The serialized page bytes.</returns>
         public byte[] WritePage()
         {
             var writer = new ByteWriter(BasePage.PAGE_SIZE);

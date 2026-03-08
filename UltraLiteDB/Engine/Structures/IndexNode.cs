@@ -3,7 +3,8 @@
 namespace UltraLiteDB
 {
 	/// <summary>
-	/// Represent a index node inside a Index Page
+	/// A node in a skip-list index, stored within an <see cref="IndexPage"/>. Contains the indexed key value,
+	/// level-based Next/Prev pointers for the skip list, and a reference to the document's <see cref="DataBlock"/>.
 	/// </summary>
 	internal class IndexNode
     {
@@ -121,6 +122,9 @@ namespace UltraLiteDB
         }
     }
 
+    /// <summary>
+    /// Compares <see cref="IndexNode"/>s by their <see cref="IndexNode.DataBlock"/> address for deduplication.
+    /// </summary>
     internal class IndexNodeComparer : IEqualityComparer<IndexNode>
     {
         public bool Equals(IndexNode x, IndexNode y)

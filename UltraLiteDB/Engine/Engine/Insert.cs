@@ -6,7 +6,7 @@ namespace UltraLiteDB
     public partial class UltraLiteEngine
     {
         /// <summary>
-        /// Implements insert documents in a collection - returns _id value
+        /// Inserts a single document into a collection. Returns the document's _id value (auto-generated if not set).
         /// </summary>
         public BsonValue Insert(string collection, BsonDocument doc, BsonAutoId autoId = BsonAutoId.ObjectId)
         {
@@ -23,7 +23,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Implements insert documents in a collection - use a buffer to commit transaction in each buffer count
+        /// Inserts multiple documents into a collection within a single transaction. Returns the number of documents inserted.
         /// </summary>
         public int Insert(string collection, IEnumerable<BsonDocument> docs, BsonAutoId autoId = BsonAutoId.ObjectId)
         {
@@ -48,7 +48,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Bulk documents to a collection - use data chunks for most efficient insert
+        /// Inserts documents in batches for efficient bulk loading. Each batch runs in its own transaction.
         /// </summary>
         public int InsertBulk(string collection, IEnumerable<BsonDocument> docs, int batchSize = 5000, BsonAutoId autoId = BsonAutoId.ObjectId)
         {
@@ -67,7 +67,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Bulk upsert documents to a collection - use data chunks for most efficient insert
+        /// Upserts documents in batches for efficient bulk loading. Each batch runs in its own transaction.
         /// </summary>
         public int UpsertBulk(string collection, IEnumerable<BsonDocument> docs, int batchSize = 5000, BsonAutoId autoId = BsonAutoId.ObjectId)
         {
@@ -86,7 +86,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Internal implementation of insert a document
+        /// Core insert logic: assigns auto-ID if needed, serializes the document to BSON bytes,
+        /// stores in data pages, creates the PK index node, and populates all secondary indexes.
         /// </summary>
         private void InsertDocument(CollectionPage col, BsonDocument doc, BsonAutoId autoId)
         {

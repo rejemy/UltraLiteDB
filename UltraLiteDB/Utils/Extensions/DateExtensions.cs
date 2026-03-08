@@ -2,10 +2,13 @@
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Extension methods for <see cref="DateTime"/> truncation and calendar difference calculations.
+    /// </summary>
     internal static class DateExtensions
     {
         /// <summary>
-        /// Truncate DateTime in milliseconds
+        /// Truncate a DateTime to millisecond precision (removes sub-millisecond ticks).
         /// </summary>
         public static DateTime Truncate(this DateTime dt)
         {
@@ -19,6 +22,9 @@ namespace UltraLiteDB
                 dt.Kind);
         }
 
+        /// <summary>
+        /// Returns the number of complete calendar months between two dates.
+        /// </summary>
         public static int MonthDifference(this DateTime startDate, DateTime endDate)
         {
             // https://stackoverflow.com/a/1526116/3286260
@@ -30,6 +36,9 @@ namespace UltraLiteDB
             return Convert.ToInt32(Math.Truncate(months));
         }
 
+        /// <summary>
+        /// Returns the number of complete calendar years between two dates.
+        /// </summary>
         public static int YearDifference(this DateTime startDate, DateTime endDate)
         {
             // https://stackoverflow.com/a/28444291/3286260

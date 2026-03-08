@@ -6,13 +6,24 @@ using System.Linq;
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Represents a BSON document — an ordered set of string-keyed <see cref="BsonValue"/> fields.
+    /// Keys are case-insensitive. Implements <see cref="IDictionary{TKey,TValue}"/> for convenient field access.
+    /// This is the primary unit of storage in UltraLiteDB.
+    /// </summary>
     public class BsonDocument : BsonValue, IDictionary<string, BsonValue>
     {
+        /// <summary>
+        /// Creates an empty BSON document.
+        /// </summary>
         public BsonDocument()
             : base(BsonType.Document, new Dictionary<string, BsonValue>(StringComparer.OrdinalIgnoreCase))
         {
         }
 
+        /// <summary>
+        /// Creates a BSON document from a <see cref="ConcurrentDictionary{TKey,TValue}"/>.
+        /// </summary>
         public BsonDocument(ConcurrentDictionary<string, BsonValue> dict)
             : this()
         {
@@ -24,6 +35,9 @@ namespace UltraLiteDB
             }
         }
 
+        /// <summary>
+        /// Creates a BSON document from a dictionary of string keys to <see cref="BsonValue"/>.
+        /// </summary>
         public BsonDocument(IDictionary<string, BsonValue> dict)
             : this()
         {
@@ -35,6 +49,9 @@ namespace UltraLiteDB
             }
         }
 
+        /// <summary>
+        /// Creates a BSON document from a non-generic dictionary. Values are converted via <see cref="BsonValue.FromObject"/>.
+        /// </summary>
         public BsonDocument(IDictionary dict)
             : this()
         {
@@ -49,12 +66,13 @@ namespace UltraLiteDB
         internal new Dictionary<string, BsonValue> RawValue => base.RawValue as Dictionary<string, BsonValue>;
 
         /// <summary>
-        /// Get/Set position of this document inside database. It's filled when used in Find operation.
+        /// Internal page address of this document within the data file. Populated during Find operations.
         /// </summary>
         internal PageAddress RawId { get; set; } = PageAddress.Empty;
 
         /// <summary>
-        /// Get/Set a field for document. Fields are case sensitive
+        /// Gets or sets a field by key (case-insensitive). Returns <see cref="BsonValue.Null"/> for missing keys.
+        /// Setting a null value stores <see cref="BsonValue.Null"/>.
         /// </summary>
         public override BsonValue this[string key]
         {
@@ -68,6 +86,9 @@ namespace UltraLiteDB
             }
         }
 
+        /// <summary>
+        /// Gets a boolean field value, or null if the key is missing or not a boolean.
+        /// </summary>
         public bool? GetBool(string key)
         {
             BsonValue value;
@@ -78,6 +99,9 @@ namespace UltraLiteDB
             return null;
         }
 
+        /// <summary>
+        /// Gets a boolean field value, or <paramref name="def"/> if the key is missing or not a boolean.
+        /// </summary>
         public bool GetBoolOrDefault(string key, bool def)
         {
             BsonValue value;
@@ -88,6 +112,9 @@ namespace UltraLiteDB
             return def;
         }
 
+        /// <summary>
+        /// Gets a string field value, or null if the key is missing or not a string.
+        /// </summary>
         public string GetString(string key)
         {
             BsonValue value;
@@ -98,6 +125,9 @@ namespace UltraLiteDB
             return null;
         }
 
+        /// <summary>
+        /// Gets a string field value, or <paramref name="def"/> if the key is missing or not a string.
+        /// </summary>
         public string GetStringOrDefault(string key, string def)
         {
             BsonValue value;
@@ -108,6 +138,9 @@ namespace UltraLiteDB
             return def;
         }
 
+        /// <summary>
+        /// Gets a numeric field value as Int32, or null if the key is missing or not numeric.
+        /// </summary>
         public int? GetInt32(string key)
         {
             BsonValue value;
@@ -118,6 +151,9 @@ namespace UltraLiteDB
             return null;
         }
 
+        /// <summary>
+        /// Gets a numeric field value as Int32, or <paramref name="def"/> if the key is missing or not numeric.
+        /// </summary>
         public int GetInt32OrDefault(string key, int def)
         {
             BsonValue value;
@@ -128,6 +164,9 @@ namespace UltraLiteDB
             return def;
         }
 
+        /// <summary>
+        /// Gets a numeric field value as Int64, or null if the key is missing or not numeric.
+        /// </summary>
         public long? GetInt64(string key)
         {
             BsonValue value;
@@ -138,6 +177,9 @@ namespace UltraLiteDB
             return null;
         }
 
+        /// <summary>
+        /// Gets a numeric field value as Int64, or <paramref name="def"/> if the key is missing or not numeric.
+        /// </summary>
         public long GetInt64OrDefault(string key, long def)
         {
             BsonValue value;
@@ -148,6 +190,9 @@ namespace UltraLiteDB
             return def;
         }
 
+        /// <summary>
+        /// Gets a numeric field value as Single, or null if the key is missing or not numeric.
+        /// </summary>
         public float? GetSingle(string key)
         {
             BsonValue value;
@@ -158,6 +203,9 @@ namespace UltraLiteDB
             return null;
         }
 
+        /// <summary>
+        /// Gets a numeric field value as Single, or <paramref name="def"/> if the key is missing or not numeric.
+        /// </summary>
         public float GetSingleOrDefault(string key, float def)
         {
             BsonValue value;
@@ -168,6 +216,9 @@ namespace UltraLiteDB
             return def;
         }
 
+        /// <summary>
+        /// Gets a numeric field value as Double, or null if the key is missing or not numeric.
+        /// </summary>
         public double? GetDouble(string key)
         {
             BsonValue value;
@@ -177,6 +228,9 @@ namespace UltraLiteDB
             }
             return null;
         }
+        /// <summary>
+        /// Gets a numeric field value as Double, or <paramref name="def"/> if the key is missing or not numeric.
+        /// </summary>
         public double GetDoubleOrDefault(string key, double def)
         {
             BsonValue value;
@@ -232,7 +286,7 @@ namespace UltraLiteDB
         public bool ContainsKey(string key) => this.RawValue.ContainsKey(key);
 
         /// <summary>
-        /// Get all document elements - Return "_id" as first of all (if exists)
+        /// Enumerates all document fields, yielding "_id" first (if present), then remaining fields.
         /// </summary>
         public IEnumerable<KeyValuePair<string, BsonValue>> GetElements()
         {
@@ -271,6 +325,9 @@ namespace UltraLiteDB
             ((ICollection<KeyValuePair<string, BsonValue>>)this.RawValue).CopyTo(array, arrayIndex);
         }
 
+        /// <summary>
+        /// Copies all fields from this document into <paramref name="other"/>, overwriting existing keys.
+        /// </summary>
         public void CopyTo(BsonDocument other)
         {
             foreach(var element in this)

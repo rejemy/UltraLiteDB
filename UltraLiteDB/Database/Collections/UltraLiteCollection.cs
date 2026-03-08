@@ -2,6 +2,12 @@
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Represents a typed collection of documents in the database.
+    /// Provides CRUD operations, indexing, and aggregate queries with automatic POCO-to-BSON mapping.
+    /// For untyped access, use <c>UltraLiteCollection&lt;BsonDocument&gt;</c>.
+    /// </summary>
+    /// <typeparam name="T">The document type. Can be a POCO class or <see cref="BsonDocument"/>.</typeparam>
     public sealed partial class UltraLiteCollection<T>
     {
         private string _name;
@@ -13,15 +19,23 @@ namespace UltraLiteDB
         private BsonAutoId _autoId;
 
         /// <summary>
-        /// Get collection name
+        /// Gets the collection name.
         /// </summary>
         public string Name { get { return _name; } }
 
         /// <summary>
-        /// Getting entity mapper from current collection. Returns null if collection are BsonDocument type
+        /// Gets the entity mapper for <typeparamref name="T"/>. Returns null when <typeparamref name="T"/> is <see cref="BsonDocument"/>.
         /// </summary>
         public EntityMapper EntityMapper => _entity;
 
+        /// <summary>
+        /// Initializes a new collection instance. Automatically determines the auto-id type from the mapped _id member.
+        /// </summary>
+        /// <param name="name">Collection name, or null to resolve from <typeparamref name="T"/>.</param>
+        /// <param name="autoId">Default auto-id strategy (used for <see cref="BsonDocument"/> collections).</param>
+        /// <param name="engine">Lazy-loaded engine instance.</param>
+        /// <param name="mapper">The BSON mapper for POCO serialization.</param>
+        /// <param name="log">Logger instance.</param>
         public UltraLiteCollection(string name, BsonAutoId autoId, LazyLoad<UltraLiteEngine> engine, BsonMapper mapper, Logger log)
         {
             _name = name ?? mapper.ResolveCollectionName(typeof(T));

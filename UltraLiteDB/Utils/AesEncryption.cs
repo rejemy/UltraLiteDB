@@ -12,6 +12,11 @@ namespace UltraLiteDB
     {
         private Aes _aes;
 
+        /// <summary>
+        /// Initializes AES encryption using a password and salt to derive the key and IV via PBKDF2.
+        /// </summary>
+        /// <param name="password">The password used to derive the encryption key.</param>
+        /// <param name="salt">The salt bytes used in key derivation.</param>
         public AesEncryption(string password, byte[] salt)
         {
             _aes = Aes.Create();
@@ -27,8 +32,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Encrypt byte array returning new encrypted byte array with same length of original array (PAGE_SIZE)
+        /// Encrypts a byte array, returning a new encrypted byte array with the same length as the original.
         /// </summary>
+        /// <param name="bytes">The plaintext byte array to encrypt.</param>
+        /// <returns>The encrypted byte array.</returns>
         public byte[] Encrypt(byte[] bytes)
         {
             using (var encryptor = _aes.CreateEncryptor())
@@ -46,8 +53,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Decrypt and byte array returning a new byte array
+        /// Decrypts a byte array, returning a new plaintext byte array.
         /// </summary>
+        /// <param name="encryptedValue">The encrypted byte array to decrypt.</param>
+        /// <returns>The decrypted byte array.</returns>
         public byte[] Decrypt(byte[] encryptedValue)
         {
             using (var decryptor = _aes.CreateDecryptor())
@@ -65,8 +74,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Hash a password using SHA1 just to verify password
+        /// Hashes a password using SHA1 for password verification purposes.
         /// </summary>
+        /// <param name="password">The password to hash.</param>
+        /// <returns>The SHA1 hash of the password as a byte array.</returns>
         public static byte[] HashSHA1(string password)
         {
             var sha = SHA1.Create();
@@ -75,9 +86,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Generate a salt key that will be stored inside first page database
+        /// Generates a cryptographically random salt for use in key derivation, stored in the database header page.
         /// </summary>
-        /// <returns></returns>
+        /// <param name="maxLength">The length of the salt in bytes (default: 16).</param>
+        /// <returns>A byte array containing the random salt.</returns>
         public static byte[] Salt(int maxLength = 16)
         {
             var salt = new byte[maxLength];
@@ -89,6 +101,9 @@ namespace UltraLiteDB
             return salt;
         }
 
+        /// <summary>
+        /// Releases the AES encryption resources.
+        /// </summary>
         public void Dispose()
         {
             if (_aes != null)

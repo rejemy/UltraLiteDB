@@ -8,7 +8,9 @@ using System.Collections.Generic;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Represent a Bson Value used in BsonDocument
+    /// Base type for all BSON values. Wraps a .NET value with its <see cref="BsonType"/> tag.
+    /// Supports implicit conversions to/from common .NET types, comparison operators, and arithmetic on numeric types.
+    /// Subclassed by <see cref="BsonDocument"/> and <see cref="BsonArray"/>.
     /// </summary>
     public class BsonValue : IComparable<BsonValue>, IEquatable<BsonValue>
     {
@@ -30,12 +32,12 @@ namespace UltraLiteDB
         public static BsonValue MaxValue = new BsonValue(BsonType.MaxValue, "+oo");
 
         /// <summary>
-        /// Indicate BsonType of this BsonValue
+        /// Gets the BSON type of this value.
         /// </summary>
         public BsonType Type { get; }
 
         /// <summary>
-        /// Get internal .NET value object
+        /// Gets the underlying .NET value (e.g. int, string, Dictionary, List).
         /// </summary>
         internal virtual object RawValue { get; }
 
@@ -125,6 +127,11 @@ namespace UltraLiteDB
             this.RawValue = value.RawValue;
         }
         
+        /// <summary>
+        /// Creates a <see cref="BsonValue"/> from a .NET object. Supports primitive types, collections, and BsonValue.
+        /// For complex POCO types, use <see cref="BsonMapper.ToDocument"/> instead.
+        /// </summary>
+        /// <exception cref="InvalidCastException">Thrown when the value type is not a supported BSON type.</exception>
         public static BsonValue FromObject(object value)
         {
             if (value == null) return new BsonValue(BsonType.Null, null);
@@ -151,6 +158,9 @@ namespace UltraLiteDB
             }
         }
 
+        /// <summary>
+        /// Casts the underlying <see cref="RawValue"/> to <typeparamref name="T"/>.
+        /// </summary>
         public T AsType<T>()
         {
             return (T)this.RawValue;
@@ -167,7 +177,7 @@ namespace UltraLiteDB
         #region Index "this" property
 
         /// <summary>
-        /// Get/Set a field for document. Fields are case sensitive - Works only when value are document
+        /// Gets or sets a field by name. Only valid on <see cref="BsonDocument"/>; throws on other types.
         /// </summary>
         public virtual BsonValue this[string name]
         {
@@ -176,7 +186,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get/Set value in array position. Works only when value are array
+        /// Gets or sets a value by array index. Only valid on <see cref="BsonArray"/>; throws on other types.
         /// </summary>
         public virtual BsonValue this[int index]
         {
@@ -656,9 +666,9 @@ namespace UltraLiteDB
         #region GetBytesCount()
 
         /// <summary>
-        /// Returns how many bytes this BsonValue will consume when converted into binary BSON
-        /// If recalc = false, use cached length value (from Array/Document only)
+        /// Returns the number of bytes this value will occupy in binary BSON format.
         /// </summary>
+        /// <param name="recalc">If false, returns a cached length for Document/Array types. If true, recalculates.</param>
         public virtual int GetBytesCount(bool recalc)
         {
             switch (this.Type)
@@ -689,7 +699,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Get how many bytes one single element will used in BSON format
+        /// Calculates the BSON byte size for a single key-value element (type byte + key CString + value bytes + variant header).
         /// </summary>
         protected int GetBytesCountElement(string key, BsonValue value)
         {

@@ -7,8 +7,13 @@ namespace UltraLiteDB
     public partial class UltraLiteEngine
     {
         /// <summary>
-        /// Find for documents in a collection using Query definition
+        /// Finds documents in a collection matching a <see cref="Query"/>, with optional skip/limit pagination.
+        /// Uses a <see cref="QueryCursor"/> to stream results in batches.
         /// </summary>
+        /// <param name="collection">The collection name.</param>
+        /// <param name="query">The query filter.</param>
+        /// <param name="skip">Number of documents to skip.</param>
+        /// <param name="limit">Maximum number of documents to return.</param>
         public IEnumerable<BsonDocument> Find(string collection, Query query, int skip = 0, int limit = int.MaxValue)
         {
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));
@@ -53,7 +58,7 @@ namespace UltraLiteDB
         #region FindOne/FindById
 
         /// <summary>
-        /// Find first or default document based in collection based on Query filter
+        /// Returns the first document matching the query, or null if none found.
         /// </summary>
         public BsonDocument FindOne(string collection, Query query)
         {
@@ -61,7 +66,7 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Find first or default document based in _id field
+        /// Returns the document with the specified _id value, or null if not found.
         /// </summary>
         public BsonDocument FindById(string collection, BsonValue id)
         {
@@ -72,7 +77,7 @@ namespace UltraLiteDB
 
 
         /// <summary>
-        /// Returns all documents inside collection order by _id index.
+        /// Returns all documents in the collection ordered by the _id index.
         /// </summary>
         public IEnumerable<BsonDocument> FindAll(string collection)
         {

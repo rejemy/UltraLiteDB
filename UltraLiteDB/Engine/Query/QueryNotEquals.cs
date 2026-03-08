@@ -4,7 +4,7 @@ using System.Linq;
 namespace UltraLiteDB
 {
 	/// <summary>
-	/// Not is an Index Scan operation
+	/// Not-equal (!=) query. Performs an Index Scan, filtering out nodes that match the value.
 	/// </summary>
 	internal class QueryNotEquals : Query
     {

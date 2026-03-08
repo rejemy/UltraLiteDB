@@ -1,7 +1,7 @@
 ﻿namespace UltraLiteDB
 {
     /// <summary>
-    /// All supported BsonTypes in sort order
+    /// Enumerates all supported BSON value types. Numeric values define the sort order used for cross-type comparisons.
     /// </summary>
     public enum BsonType
     {

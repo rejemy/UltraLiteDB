@@ -5,7 +5,8 @@ using System.Linq;
 namespace UltraLiteDB
 {
     /// <summary>
-    /// Execute an index scan passing a Func as where
+    /// Predicate-based query that applies a <c>Func&lt;BsonValue, bool&gt;</c> against index values.
+    /// Performs a full Index Scan but avoids deserializing documents.
     /// </summary>
     internal class QueryWhere : Query
     {

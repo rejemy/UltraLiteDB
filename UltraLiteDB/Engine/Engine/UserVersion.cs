@@ -4,7 +4,8 @@ namespace UltraLiteDB
     public partial class UltraLiteEngine
     {
         /// <summary>
-        /// Get/Set User version internal database
+        /// Gets or sets a user-defined version number stored in the database header.
+        /// Useful for tracking schema migrations.
         /// </summary>
         public ushort UserVersion
         {

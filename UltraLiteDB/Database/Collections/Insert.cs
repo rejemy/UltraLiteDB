@@ -6,8 +6,11 @@ namespace UltraLiteDB
     public partial class UltraLiteCollection<T>
     {
         /// <summary>
-        /// Insert a new entity to this collection. Document Id must be a new value in collection - Returns document Id
+        /// Inserts a new document into this collection. If the _id field is empty or missing, an auto-generated id is assigned
+        /// and written back to the entity's id property.
         /// </summary>
+        /// <param name="document">The entity to insert.</param>
+        /// <returns>The document's _id value (auto-generated if applicable).</returns>
         public BsonValue Insert(T document)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
@@ -27,8 +30,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Insert a new document to this collection using passed id value.
+        /// Inserts a new document with an explicit _id value.
         /// </summary>
+        /// <param name="id">The _id to assign to the document.</param>
+        /// <param name="document">The entity to insert.</param>
         public void Insert(BsonValue id, T document)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
@@ -42,8 +47,10 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Insert an array of new documents to this collection. Document Id must be a new value in collection. Can be set buffer size to commit at each N documents
+        /// Inserts multiple documents into this collection.
         /// </summary>
+        /// <param name="docs">The documents to insert.</param>
+        /// <returns>The number of documents inserted.</returns>
         public int Insert(IEnumerable<T> docs)
         {
             if (docs == null) throw new ArgumentNullException(nameof(docs));
@@ -52,8 +59,11 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Implements bulk insert documents in a collection. Usefull when need lots of documents.
+        /// Bulk-inserts documents, committing in batches to reduce memory pressure.
         /// </summary>
+        /// <param name="docs">The documents to insert.</param>
+        /// <param name="batchSize">Number of documents per transaction batch.</param>
+        /// <returns>The number of documents inserted.</returns>
         public int InsertBulk(IEnumerable<T> docs, int batchSize = 5000)
         {
             if (docs == null) throw new ArgumentNullException(nameof(docs));
@@ -62,8 +72,11 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Implements bulk upsert of documents in a collection. Usefull when need lots of documents.
+        /// Bulk-upserts documents, committing in batches to reduce memory pressure.
         /// </summary>
+        /// <param name="docs">The documents to upsert.</param>
+        /// <param name="batchSize">Number of documents per transaction batch.</param>
+        /// <returns>The number of documents inserted or updated.</returns>
         public int UpsertBulk(IEnumerable<T> docs, int batchSize = 5000)
         {
             if (docs == null) throw new ArgumentNullException(nameof(docs));
@@ -72,7 +85,8 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Convert each T document in a BsonDocument, setting autoId for each one
+        /// Converts each entity to a <see cref="BsonDocument"/>, removing empty _id fields for auto-id generation,
+        /// and writing generated ids back to the source entities.
         /// </summary>
         private IEnumerable<BsonDocument> GetBsonDocs(IEnumerable<T> documents)
         {
@@ -90,8 +104,9 @@ namespace UltraLiteDB
             }
         }
 
-         /// <summary>
-        /// Convert each T document in a BsonDocument, setting autoId for each one
+        /// <summary>
+        /// Converts a single entity to a <see cref="BsonDocument"/>, yielding it as an enumerable for engine methods
+        /// that accept <c>IEnumerable&lt;BsonDocument&gt;</c>.
         /// </summary>
         private IEnumerable<BsonDocument> GetBsonDoc(T document)
         {
@@ -107,8 +122,11 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Remove document _id if contains a "empty" value (checks for autoId bson type)
+        /// Removes the _id field from the document if it contains a default/empty value for its auto-id type
+        /// (e.g. 0 for Int32, <see cref="ObjectId.Empty"/> for ObjectId, <see cref="Guid.Empty"/> for Guid).
+        /// This signals the engine to auto-generate a new _id on insert.
         /// </summary>
+        /// <returns>True if the _id was removed and should be written back after insert.</returns>
         private bool RemoveDocId(BsonDocument doc)
         {
             if (_id != null && doc.TryGetValue("_id", out var id)) 

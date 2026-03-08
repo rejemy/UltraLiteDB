@@ -3,8 +3,7 @@
 namespace UltraLiteDB
 {
     /// <summary>
-    /// LazyLoad class for .NET 3.5
-    /// http://stackoverflow.com/questions/3207580/implementation-of-lazyt-for-net-3-5
+    /// Thread-safe lazy initialization wrapper. Creates the value on first access via a factory delegate.
     /// </summary>
     public class LazyLoad<T>
         where T : class

@@ -3,8 +3,9 @@
 namespace UltraLiteDB
 {
     /// <summary>
-    /// A logger class to log all information about database. Used with levels. Level = 0 - 255
-    /// All log will be trigger before operation execute (better for debug)
+    /// Bitmask-based logger for database diagnostics. Each subsystem (DISK, CACHE, QUERY, etc.) has a
+    /// bit flag; messages are emitted only when the corresponding bit is set in <see cref="Level"/>.
+    /// Log messages fire before the operation executes (useful for debugging hangs).
     /// </summary>
     public class Logger
     {

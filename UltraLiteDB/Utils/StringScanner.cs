@@ -3,7 +3,8 @@
 namespace UltraLiteDB
 {
 	/// <summary>
-	/// A StringScanner is state machine used in text parsers based on regular expressions
+	/// Cursor-based string parser that advances through a source string using regex pattern matching.
+	/// Used by query and expression parsers to tokenize and extract structured data from text.
 	/// </summary>
 	public class StringScanner
     {

@@ -2,6 +2,9 @@
 
 namespace UltraLiteDB
 {
+    /// <summary>
+    /// Convenience string extension methods for null/empty/whitespace checks.
+    /// </summary>
     internal static class StringExtensions
     {
         public static bool IsNullOrWhiteSpace(this string str)
