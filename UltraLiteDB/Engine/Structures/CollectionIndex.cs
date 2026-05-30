@@ -24,7 +24,7 @@ namespace UltraLiteDB
         /// <summary>
         /// The indexed field name (supports dot notation for nested fields).
         /// </summary>
-        public string Field { get; set; }
+        public string Field { get; set; } = null!;
 
         /// <summary>
         /// If true, duplicate key values are rejected on insert.
@@ -62,7 +62,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Reference to the parent <see cref="CollectionPage"/> that owns this index.
         /// </summary>
-        public CollectionPage Page { get; set; }
+        public CollectionPage Page { get; set; } = null!;
 
         public CollectionIndex()
         {

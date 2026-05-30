@@ -7,29 +7,29 @@ namespace UltraLiteDB.Tests.Mapper
     public class MyBsonFieldTestClass
     {
         [BsonField("MY-STRING")]
-        public string MyString { get; set; }
+        public string? MyString { get; set; }
 
         [BsonField]
-        internal string MyInternalPropertySerializable { get; set; }
+        internal string? MyInternalPropertySerializable { get; set; }
 
         [BsonField]
-        private string MyPrivatePropertySerializable { get; set; }
+        private string? MyPrivatePropertySerializable { get; set; }
 
         [BsonField]
-        protected string MyProtectedPropertySerializable { get; set; }
+        protected string? MyProtectedPropertySerializable { get; set; }
 
         [BsonField("INTERNAL-PROPERTY")]
-        internal string MyInternalPropertyNamed { get; set; }
+        internal string? MyInternalPropertyNamed { get; set; }
 
         [BsonField("PRIVATE-PROPERTY")]
-        private string MyPrivatePropertyNamed { get; set; }
+        private string? MyPrivatePropertyNamed { get; set; }
 
         [BsonField("PROTECTED-PROPERTY")]
-        protected string MyProtectedPropertyNamed { get; set; }
+        protected string? MyProtectedPropertyNamed { get; set; }
 
-        internal string MyInternalPropertyNotSerializable { get; set; }
-        private string MyPrivatePropertyNotSerializable { get; set; }
-        protected string MyProtectedPropertyNotSerializable { get; set; }
+        internal string? MyInternalPropertyNotSerializable { get; set; }
+        private string? MyPrivatePropertyNotSerializable { get; set; }
+        protected string? MyProtectedPropertyNotSerializable { get; set; }
 
         public void SetPrivateProperties(string str)
         {
@@ -45,32 +45,32 @@ namespace UltraLiteDB.Tests.Mapper
             MyProtectedPropertyNotSerializable = str + "NotSerialisable";
         }
 
-        public string GetMyPrivatePropertySerializable()
+        public string? GetMyPrivatePropertySerializable()
         {
             return MyPrivatePropertySerializable;
         }
 
-        public string GetMyProtectedPropertySerializable()
+        public string? GetMyProtectedPropertySerializable()
         {
             return MyProtectedPropertySerializable;
         }
 
-        public string GetMyPrivatePropertyNamed()
+        public string? GetMyPrivatePropertyNamed()
         {
             return MyPrivatePropertyNamed;
         }
 
-        public string GetMyProtectedPropertyNamed()
+        public string? GetMyProtectedPropertyNamed()
         {
             return MyProtectedPropertyNamed;
         }
 
-        public string GetMyPrivatePropertyNotSerializable()
+        public string? GetMyPrivatePropertyNotSerializable()
         {
             return MyPrivatePropertyNotSerializable;
         }
 
-        public string GetMyProtectedPropertyNotSerializable()
+        public string? GetMyProtectedPropertyNotSerializable()
         {
             return MyProtectedPropertyNotSerializable;
         }

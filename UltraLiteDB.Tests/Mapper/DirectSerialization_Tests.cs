@@ -12,7 +12,7 @@ namespace UltraLiteDB.Tests.Mapper
     public class SimplePrimitivesModel
     {
         public int Id { get; set; }
-        public string Name { get; set; }
+        public string? Name { get; set; }
         public int IntVal { get; set; }
         public long LongVal { get; set; }
         public double DoubleVal { get; set; }
@@ -20,8 +20,8 @@ namespace UltraLiteDB.Tests.Mapper
         public bool BoolVal { get; set; }
         public DateTime DateVal { get; set; }
         public Guid GuidVal { get; set; }
-        public ObjectId OidVal { get; set; }
-        public byte[] BinaryVal { get; set; }
+        public ObjectId? OidVal { get; set; }
+        public byte[]? BinaryVal { get; set; }
     }
 
     public class ConvertedTypesModel
@@ -41,28 +41,28 @@ namespace UltraLiteDB.Tests.Mapper
     public class NestedModel
     {
         public int Id { get; set; }
-        public InnerModel Inner { get; set; }
+        public InnerModel? Inner { get; set; }
     }
 
     public class InnerModel
     {
-        public string Value { get; set; }
+        public string? Value { get; set; }
         public int Number { get; set; }
     }
 
     public class CollectionsModel
     {
         public int Id { get; set; }
-        public string[] StringArray { get; set; }
-        public List<int> IntList { get; set; }
-        public Dictionary<string, string> StringDict { get; set; }
-        public Dictionary<int, string> IntKeyDict { get; set; }
+        public string[]? StringArray { get; set; }
+        public List<int>? IntList { get; set; }
+        public Dictionary<string, string>? StringDict { get; set; }
+        public Dictionary<int, string>? IntKeyDict { get; set; }
     }
 
     public class CustomSerializerModel
     {
         public int Id { get; set; }
-        public Uri UriVal { get; set; }
+        public Uri? UriVal { get; set; }
         public TimeSpan TimeSpanVal { get; set; }
     }
 
@@ -71,24 +71,24 @@ namespace UltraLiteDB.Tests.Mapper
         public int Id { get; set; }
         public int? NullableInt { get; set; }
         public DateTime? NullableDate { get; set; }
-        public string NullString { get; set; }
+        public string? NullString { get; set; }
     }
 
     public class DerivedBase
     {
         public int Id { get; set; }
-        public string BaseProp { get; set; }
+        public string? BaseProp { get; set; }
     }
 
     public class DerivedChild : DerivedBase
     {
-        public string ChildProp { get; set; }
+        public string? ChildProp { get; set; }
     }
 
     public class DerivedContainer
     {
         public int Id { get; set; }
-        public DerivedBase Item { get; set; }
+        public DerivedBase? Item { get; set; }
     }
 
     #endregion
@@ -449,8 +449,8 @@ namespace UltraLiteDB.Tests.Mapper
             Assert.AreEqual(obj.Id, result.Id);
             CollectionAssert.AreEqual(obj.StringArray, result.StringArray);
             CollectionAssert.AreEqual(obj.IntList, result.IntList);
-            Assert.AreEqual(obj.StringDict["k1"], result.StringDict["k1"]);
-            Assert.AreEqual(obj.IntKeyDict[1], result.IntKeyDict[1]);
+            Assert.AreEqual(obj.StringDict["k1"], result.StringDict!["k1"]);
+            Assert.AreEqual(obj.IntKeyDict[1], result.IntKeyDict![1]);
         }
 
         [TestMethod]
@@ -486,7 +486,7 @@ namespace UltraLiteDB.Tests.Mapper
             var result = mapper.DeserializeFromBytes<NestedModel>(bytes);
 
             Assert.AreEqual(obj.Id, result.Id);
-            Assert.AreEqual(obj.Inner.Value, result.Inner.Value);
+            Assert.AreEqual(obj.Inner.Value, result.Inner!.Value);
             Assert.AreEqual(obj.Inner.Number, result.Inner.Number);
         }
 

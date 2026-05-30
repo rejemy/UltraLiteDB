@@ -25,7 +25,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Gets a page from the dirty or clean cache. Returns null if not cached. Thread-safe.
         /// </summary>
-        public BasePage GetPage(uint pageID)
+        public BasePage? GetPage(uint pageID)
         {
             // try get page from dirty cache or from clean list
             lock(this)

@@ -7,8 +7,8 @@ namespace UltraLiteDB
 	/// </summary>
 	internal class KeyDocument
     {
-        public BsonValue Key { get; set; }
-        public BsonDocument Document { get; set; }
+        public BsonValue Key { get; set; } = null!;
+        public BsonDocument Document { get; set; } = null!;
     }
 
     /// <summary>

@@ -12,22 +12,22 @@ namespace UltraLiteDB.Tests.Mapper
 
     public class GetterSetterClass
     {
-        public string PublicProperty { get; set; }
-        internal string InternalProperty { get; set; }
-        protected string ProtectedProperty { get; set; }
-        private string PrivateProperty { get; set; }
+        public string? PublicProperty { get; set; }
+        internal string? InternalProperty { get; set; }
+        protected string? ProtectedProperty { get; set; }
+        private string? PrivateProperty { get; set; }
 
-        public string PublicField;
-        internal string InternalField;
-        protected string ProtectedField;
-        private string PrivateField;
+        public string? PublicField;
+        internal string? InternalField;
+        protected string? ProtectedField;
+        private string? PrivateField;
 
-        public string GetProtectedProperty()
+        public string? GetProtectedProperty()
         {
             return ProtectedProperty;
         }
 
-        public string GetPrivateProperty()
+        public string? GetPrivateProperty()
         {
             return PrivateProperty;
         }
@@ -42,12 +42,12 @@ namespace UltraLiteDB.Tests.Mapper
             PrivateProperty = value;
         }
 
-        public string GetProtectedField()
+        public string? GetProtectedField()
         {
             return ProtectedField;
         }
 
-        public string GetPrivateField()
+        public string? GetPrivateField()
         {
             return PrivateField;
         }

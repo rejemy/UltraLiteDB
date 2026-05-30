@@ -100,7 +100,7 @@ namespace UltraLiteDB
             "OR"
         };
 
-        public Token(TokenType tokenType, string value, long position)
+        public Token(TokenType tokenType, string? value, long position)
         {
             this.Position = position;
             this.Value = value;
@@ -108,7 +108,7 @@ namespace UltraLiteDB
         }
 
         public TokenType Type { get; private set; }
-        public string Value { get; private set; }
+        public string? Value { get; private set; }
         public long Position { get; private set; }
 
         /// <summary>
@@ -186,7 +186,7 @@ namespace UltraLiteDB
                     case TokenType.NotEquals:
                         return true;
                     case TokenType.Word:
-                        return _keywords.Contains(Value);
+                        return _keywords.Contains(Value ?? "");
                     default:
                         return false;
                 }
@@ -209,12 +209,12 @@ namespace UltraLiteDB
     {
         private TextReader _reader;
         private char _char = '\0';
-        private Token _ahead = null;
+        private Token? _ahead = null;
         private bool _eof = false;
 
         public bool EOF => _eof && _ahead == null;
         public long Position { get; private set; }
-        public Token Current { get; private set; }
+        public Token? Current { get; private set; }
 
         /// <summary>
         /// If EOF throw an invalid token exception (used in while()) otherwise return "false" (not EOF)
@@ -327,7 +327,7 @@ namespace UltraLiteDB
                 return new Token(TokenType.EOF, null, this.Position);
             }
 
-            Token token = null;
+            Token? token = null;
 
             switch (_char)
             {

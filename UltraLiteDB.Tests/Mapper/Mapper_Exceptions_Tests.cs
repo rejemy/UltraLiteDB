@@ -11,7 +11,7 @@ namespace UltraLiteDB.Tests.Mapper
     public class DataRecord
     {
         public Guid Id { get; set; }
-        public string Value { get; set; }
+        public string? Value { get; set; }
     }
 
     #endregion
@@ -24,7 +24,7 @@ namespace UltraLiteDB.Tests.Mapper
         {
             var dataRecord = new DataRecord();
             var serialized = BsonMapper.Global.ToDocument(dataRecord);
-            serialized.Add("_type", dataRecord.GetType().FullName);
+            serialized.Add("_type", dataRecord.GetType().FullName!);
 
             try
             {

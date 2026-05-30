@@ -40,7 +40,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Custom deserialization functions registered for specific types.
         /// </summary>
-        private Dictionary<Type, Func<BsonValue, object>> _customDeserializer = new Dictionary<Type, Func<BsonValue, object>>();
+        private Dictionary<Type, Func<BsonValue, object?>> _customDeserializer = new Dictionary<Type, Func<BsonValue, object?>>();
 
         /// <summary>
         /// Maps CLR types to compact BSON type identifiers for polymorphic serialization.
@@ -111,7 +111,7 @@ namespace UltraLiteDB
 
         // Internal accessors for DirectBsonWriter/DirectBsonReader
         internal Dictionary<Type, Func<object, BsonValue>> CustomSerializer => _customSerializer;
-        internal Dictionary<Type, Func<BsonValue, object>> CustomDeserializer => _customDeserializer;
+        internal Dictionary<Type, Func<BsonValue, object?>> CustomDeserializer => _customDeserializer;
         internal Dictionary<Type, BsonValue> CustomTypeToId => _customTypeToId;
         internal Dictionary<BsonValue, Type> CustomIdToType => _customIdToType;
         internal Func<Type, object> TypeInstantiator => _typeInstantiator;
@@ -122,7 +122,7 @@ namespace UltraLiteDB
         /// Initializes a new instance of <see cref="BsonMapper"/> with default settings and optional IoC support.
         /// </summary>
         /// <param name="customTypeInstantiator">Optional factory function for creating type instances, enabling IoC integration. If <c>null</c>, uses <see cref="Reflection.CreateInstance"/>.</param>
-        public BsonMapper(Func<Type, object> customTypeInstantiator = null)
+        public BsonMapper(Func<Type, object>? customTypeInstantiator = null)
         {
             this.SerializeNullValues = false;
             this.TrimWhitespace = true;
@@ -142,7 +142,7 @@ namespace UltraLiteDB
             RegisterType<TimeSpan>(value => new BsonValue(value.Ticks), bson => new TimeSpan(bson.AsInt64));
             RegisterType<Regex>(
                 r => r.Options == RegexOptions.None ? new BsonValue(r.ToString()) : new BsonDocument { { "p", r.ToString() }, { "o", (int)r.Options } },
-                value => value.IsString ? new Regex(value) : new Regex(value.AsDocument["p"].AsString, (RegexOptions)value.AsDocument["o"].AsInt32)
+                value => value.IsString ? new Regex(value) : new Regex(value.AsDocument!["p"].AsString, (RegexOptions)value.AsDocument!["o"].AsInt32)
             );
 
 
@@ -302,8 +302,8 @@ namespace UltraLiteDB
 
                 // get data type
                 var dataType = memberInfo is PropertyInfo ?
-                    (memberInfo as PropertyInfo).PropertyType :
-                    (memberInfo as FieldInfo).FieldType;
+                    ((PropertyInfo)memberInfo).PropertyType :
+                    ((FieldInfo)memberInfo).FieldType;
 
                 // check if datatype is list/array
                 var isList = Reflection.IsList(dataType);
@@ -340,7 +340,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Gets MemberInfo that refers to Id from a document object.
         /// </summary>
-        protected virtual MemberInfo GetIdMember(IEnumerable<MemberInfo> members)
+        protected virtual MemberInfo? GetIdMember(IEnumerable<MemberInfo> members)
         {
             return Reflection.SelectMember(members,
                 x => Attribute.IsDefined(x, typeof(BsonIdAttribute), true),

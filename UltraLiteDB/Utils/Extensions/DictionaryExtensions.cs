@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -28,16 +29,20 @@ namespace UltraLiteDB
         }
 
         /// <summary>
-        /// Returns the value for the given key, or a default value if the key is not present.
+        /// Returns the value for the given key, or <c>null</c>/<c>default</c> if the key is not present.
         /// </summary>
-        public static T GetOrDefault<K, T>(this IDictionary<K, T> dict, K key, T defaultValue = default(T))
+        [return: MaybeNull]
+        public static T GetOrDefault<K, T>(this IDictionary<K, T> dict, K key)
         {
-            if (dict.TryGetValue(key, out T result))
-            {
-                return result;
-            }
+            return dict.TryGetValue(key, out T result) ? result : default!;
+        }
 
-            return defaultValue;
+        /// <summary>
+        /// Returns the value for the given key, or the supplied default if the key is not present.
+        /// </summary>
+        public static T GetOrDefault<K, T>(this IDictionary<K, T> dict, K key, T defaultValue)
+        {
+            return dict.TryGetValue(key, out T result) ? result : defaultValue;
         }
 
         /// <summary>
@@ -110,7 +115,7 @@ namespace UltraLiteDB
         /// </summary>
         public static long GetFileSize(this Dictionary<string, string> dict, string key, long defaultValue)
         {
-            var size = dict.GetValue<string>(key, null);
+            var size = dict.GetValue<string?>(key, null);
 
             if (size == null) return defaultValue;
 

@@ -13,14 +13,15 @@ namespace UltraLiteDB
         /// </summary>
         /// <param name="type">The declared type of the entity (used for polymorphic type resolution).</param>
         /// <param name="entity">The object to serialize.</param>
-        public virtual BsonDocument ToDocument(Type type, object entity)
+        public virtual BsonDocument ToDocument(Type type, object? entity)
         {
             if (entity == null) throw new ArgumentNullException(nameof(entity));
 
             // if object is BsonDocument, just return them
             if (entity is BsonDocument) return (BsonDocument)entity;
 
-            return this.Serialize(type, entity, 0).AsDocument;
+            // a mappable entity always serializes to a document
+            return this.Serialize(type, entity, 0).AsDocument!;
         }
 
         /// <summary>
@@ -36,7 +37,7 @@ namespace UltraLiteDB
         /// Recursively serializes a .NET object to a <see cref="BsonValue"/>. Handles primitive types, custom serializers,
         /// dictionaries, collections, and complex objects. Tracks depth to prevent infinite recursion.
         /// </summary>
-        internal BsonValue Serialize(Type type, object obj, int depth)
+        internal BsonValue Serialize(Type type, object? obj, int depth)
         {
             if (++depth > MAX_DEPTH) throw UltraLiteException.DocumentMaxDepth(MAX_DEPTH, type);
 
@@ -50,7 +51,7 @@ namespace UltraLiteDB
             // test string - mapper has some special options
             else if (obj is String)
             {
-                var str = this.TrimWhitespace ? (obj as String).Trim() : (String)obj;
+                var str = this.TrimWhitespace ? ((String)obj).Trim() : (String)obj;
 
                 if (this.EmptyStringToNull && str.Length == 0)
                 {
@@ -112,12 +113,12 @@ namespace UltraLiteDB
 
                 var itemType = type.GetTypeInfo().GetGenericArguments()[1];
 
-                return this.SerializeDictionary(itemType, obj as IDictionary, depth);
+                return this.SerializeDictionary(itemType, (IDictionary)obj, depth);
             }
             // check if is a list or array
             else if (obj is IEnumerable)
             {
-                return this.SerializeArray(Reflection.GetListItemType(obj.GetType()), obj as IEnumerable, depth);
+                return this.SerializeArray(Reflection.GetListItemType(obj.GetType()), (IEnumerable)obj, depth);
             }
             // otherwise serialize as a plain object
             else
@@ -182,8 +183,11 @@ namespace UltraLiteDB
 
             foreach (var member in entity.Members.Where(x => x.Getter != null))
             {
+                // members excluded from mapping have a null FieldName
+                if (member.FieldName == null) continue;
+
                 // get member value
-                var value = member.Getter(obj);
+                var value = member.Getter!(obj);
 
                 if (value == null && this.SerializeNullValues == false && member.FieldName != "_id") continue;
 

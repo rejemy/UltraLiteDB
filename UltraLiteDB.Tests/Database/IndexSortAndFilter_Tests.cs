@@ -7,9 +7,9 @@ namespace UltraLiteDB.Tests.Database
    [TestClass]
    public class IndexSortAndFilterTest
    {
-       private UltraLiteCollection<Item> _collection;
-       private TempFile _tempFile;
-       private UltraLiteDatabase _database;
+       private UltraLiteCollection<Item> _collection = null!;
+       private TempFile _tempFile = null!;
+       private UltraLiteDatabase _database = null!;
 
        [TestInitialize]
        public void Init()
@@ -79,9 +79,9 @@ namespace UltraLiteDB.Tests.Database
 
        public class Item
        {
-           public string Id { get; set; }
+           public string? Id { get; set; }
 
-           public string Value { get; set; }
+           public string? Value { get; set; }
        }
    }
 }

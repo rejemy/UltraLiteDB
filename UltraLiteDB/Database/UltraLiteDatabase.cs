@@ -13,10 +13,10 @@ namespace UltraLiteDB
     {
         #region Properties
 
-        private LazyLoad<UltraLiteEngine> _engine = null;
+        private LazyLoad<UltraLiteEngine> _engine;
         private BsonMapper _mapper = BsonMapper.Global;
-        private Logger _log = null;
-        private ConnectionString _connectionString = null;
+        private Logger _log;
+        private ConnectionString? _connectionString = null;
 
         /// <summary>
         /// Gets the logger instance for this database.
@@ -44,7 +44,7 @@ namespace UltraLiteDB
         /// <param name="connectionString">Connection string (e.g. "Filename=mydb.db;Password=secret"). See <see cref="ConnectionString"/> for supported keys.</param>
         /// <param name="mapper">Optional mapper for POCO serialization. Defaults to <see cref="BsonMapper.Global"/>.</param>
         /// <param name="log">Optional logger. A default logger is created if null.</param>
-        public UltraLiteDatabase(string connectionString, BsonMapper mapper = null, Logger log = null)
+        public UltraLiteDatabase(string connectionString, BsonMapper? mapper = null, Logger? log = null)
             : this(new ConnectionString(connectionString), mapper, log)
         {
         }
@@ -55,7 +55,7 @@ namespace UltraLiteDB
         /// <param name="connectionString">Parsed connection string with database options.</param>
         /// <param name="mapper">Optional mapper for POCO serialization. Defaults to <see cref="BsonMapper.Global"/>.</param>
         /// <param name="log">Optional logger. A default logger is created if null.</param>
-        public UltraLiteDatabase(ConnectionString connectionString, BsonMapper mapper = null, Logger log = null)
+        public UltraLiteDatabase(ConnectionString connectionString, BsonMapper? mapper = null, Logger? log = null)
         {
             if (connectionString == null) throw new ArgumentNullException(nameof(connectionString));
 
@@ -85,7 +85,7 @@ namespace UltraLiteDB
         /// <param name="mapper">Optional mapper for POCO serialization. Defaults to <see cref="BsonMapper.Global"/>.</param>
         /// <param name="password">Optional password for AES encryption of the data file.</param>
         /// <param name="disposeStream">If true, the stream is disposed when the database is disposed.</param>
-        public UltraLiteDatabase(Stream stream, BsonMapper mapper = null, string password = null, bool disposeStream = false)
+        public UltraLiteDatabase(Stream stream, BsonMapper? mapper = null, string? password = null, bool disposeStream = false)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
 
@@ -104,7 +104,7 @@ namespace UltraLiteDB
         /// <param name="timeout">Lock timeout for concurrent access. Null uses the engine default.</param>
         /// <param name="cacheSize">Maximum number of memory pages cached before flushing to the journal file.</param>
         /// <param name="log">Optional logger. A default logger is created if null.</param>
-        public UltraLiteDatabase(IDiskService diskService, BsonMapper mapper = null, string password = null, TimeSpan? timeout = null, int cacheSize = 5000, Logger log = null)
+        public UltraLiteDatabase(IDiskService diskService, BsonMapper? mapper = null, string? password = null, TimeSpan? timeout = null, int cacheSize = 5000, Logger? log = null)
         {
             if (diskService == null) throw new ArgumentNullException(nameof(diskService));
 
@@ -134,7 +134,7 @@ namespace UltraLiteDB
         /// </summary>
         public UltraLiteCollection<T> GetCollection<T>()
         {
-            return this.GetCollection<T>(null);
+            return new UltraLiteCollection<T>(null, BsonAutoId.ObjectId, _engine, _mapper, _log);
         }
 
         /// <summary>
@@ -212,7 +212,7 @@ namespace UltraLiteDB
         /// </summary>
         /// <param name="password">New password for the compacted file, or null for no encryption.</param>
         /// <returns>The number of bytes reduced.</returns>
-        public long Shrink(string password)
+        public long Shrink(string? password)
         {
             // if has connection string, use same path
             if (_connectionString != null)

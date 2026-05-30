@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 
 
 namespace UltraLiteDB
@@ -50,6 +51,7 @@ namespace UltraLiteDB
 
         internal new IList<BsonValue> RawValue => (List<BsonValue>)base.RawValue;
 
+        [AllowNull]
         public override BsonValue this[int index]
         {
             get
@@ -66,7 +68,7 @@ namespace UltraLiteDB
 
         public bool IsReadOnly => false;
 
-        public void Add(BsonValue item) => this.RawValue.Add(item ?? BsonValue.Null);
+        public void Add(BsonValue? item) => this.RawValue.Add(item ?? BsonValue.Null);
 
         public void AddRange<TCollection>(TCollection collection)
             where TCollection : ICollection<BsonValue>
@@ -111,7 +113,7 @@ namespace UltraLiteDB
 
         public void Clear() => this.RawValue.Clear();
 
-        public bool Contains(BsonValue item) => this.RawValue.Contains(item ?? BsonValue.Null);
+        public bool Contains(BsonValue? item) => this.RawValue.Contains(item ?? BsonValue.Null);
 
         public void CopyTo(BsonValue[] array, int arrayIndex) => this.RawValue.CopyTo(array, arrayIndex);
 
@@ -119,7 +121,7 @@ namespace UltraLiteDB
 
         public int IndexOf(BsonValue item) => this.RawValue.IndexOf(item ?? BsonValue.Null);
 
-        public void Insert(int index, BsonValue item) => this.RawValue.Insert(index, item ?? BsonValue.Null);
+        public void Insert(int index, BsonValue? item) => this.RawValue.Insert(index, item ?? BsonValue.Null);
 
         public bool Remove(BsonValue item) => this.RawValue.Remove(item);
 
@@ -138,7 +140,7 @@ namespace UltraLiteDB
             // if types are different, returns sort type order
             if (other.Type != BsonType.Array) return this.Type.CompareTo(other.Type);
 
-            var otherArray = other.AsArray;
+            var otherArray = other.AsArray!;
 
             var result = 0;
             var i = 0;

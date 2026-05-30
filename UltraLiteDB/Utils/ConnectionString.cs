@@ -22,7 +22,7 @@ namespace UltraLiteDB
         /// <summary>
         /// "password": Encrypt (using AES) your datafile with a password (default: null - no encryption)
         /// </summary>
-        public string Password { get; set; } = null;
+        public string? Password { get; set; } = null;
 
         /// <summary>
         /// "cache size": Max number of pages in cache. After this size, flush data to disk to avoid too memory usage (default: 5000)
@@ -89,7 +89,7 @@ namespace UltraLiteDB
             // setting values to properties
             this.Filename = values.GetValue("filename", this.Filename);
             this.Journal = values.GetValue("journal", this.Journal);
-            this.Password = values.GetValue<string>("password", this.Password);
+            this.Password = values.GetValue<string?>("password", this.Password);
             this.CacheSize = values.GetValue(@"cache size", this.CacheSize);
             this.Timeout = values.GetValue("timeout", this.Timeout);
             this.InitialSize = values.GetFileSize(@"initial size", this.InitialSize);

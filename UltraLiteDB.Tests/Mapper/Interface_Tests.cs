@@ -30,6 +30,8 @@ namespace UltraLiteDB.Tests.Mapper
         // must have public non-parameter ctor
         public Partner()
         {
+            this.PartnerId = "";
+            this.HostId = "";
         }
 
         public Partner(string partnerId, string hostId)

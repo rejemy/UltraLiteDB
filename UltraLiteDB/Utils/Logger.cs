@@ -23,7 +23,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Initialize logger class using a custom logging level (see Logger.NONE to Logger.FULL)
         /// </summary>
-        public Logger(byte level = NONE, Action<string> logging = null)
+        public Logger(byte level = NONE, Action<string>? logging = null)
         {
             this.Level = level;
 
@@ -36,7 +36,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Event when log writes a message. Fire on each log message
         /// </summary>
-        public event Action<string> Logging = null;
+        public event Action<string>? Logging = null;
 
         /// <summary>
         /// To full logger use Logger.FULL or any combination of Logger constants like Level = Logger.ERROR | Logger.COMMAND | Logger.DISK

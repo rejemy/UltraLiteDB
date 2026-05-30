@@ -27,7 +27,7 @@ namespace UltraLiteDB
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));
             if (query == null) throw new ArgumentNullException(nameof(query));
 
-            return this.Transaction<int>(collection, false, (col) =>
+            return this.Transaction<int>(collection, (col) =>
             {
                 if (col == null) return 0;
 
@@ -48,7 +48,7 @@ namespace UltraLiteDB
                     if (query.UseFilter)
                     {
                         var buffer = _data.Read(node.DataBlock);
-                        var doc = BsonReader.Deserialize(buffer).AsDocument;
+                        var doc = BsonReader.Deserialize(buffer).AsDocument!;
 
                         if (query.FilterDocument(doc) == false) continue;
                     }

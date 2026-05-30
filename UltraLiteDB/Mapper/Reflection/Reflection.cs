@@ -13,10 +13,10 @@ namespace UltraLiteDB
     internal delegate object CreateObject();
 
     /// <summary>Delegate that sets a member value on a target object.</summary>
-    public delegate void GenericSetter(object target, object value);
+    public delegate void GenericSetter(object target, object? value);
 
     /// <summary>Delegate that gets a member value from a source object.</summary>
-    public delegate object GenericGetter(object obj);
+    public delegate object? GenericGetter(object obj);
 
     #endregion
 
@@ -190,7 +190,7 @@ namespace UltraLiteDB
         /// Returns the first member matching any of the predicates, evaluated in order of priority.
         /// Used to resolve ID members by convention (e.g. "Id", "TypeNameId", "_id").
         /// </summary>
-        public static MemberInfo SelectMember(IEnumerable<MemberInfo> members, params Func<MemberInfo, bool>[] predicates)
+        public static MemberInfo? SelectMember(IEnumerable<MemberInfo> members, params Func<MemberInfo, bool>[] predicates)
         {
             foreach (var predicate in predicates)
             {
@@ -222,18 +222,18 @@ namespace UltraLiteDB
         /// <summary>
         /// Creates a getter delegate for a field or property. Returns null if the property has no get accessor.
         /// </summary>
-        public static GenericGetter CreateGenericGetter(Type type, MemberInfo memberInfo)
+        public static GenericGetter? CreateGenericGetter(Type type, MemberInfo memberInfo)
         {
             // when member is a field, use simple Reflection
             if (memberInfo is FieldInfo)
             {
-                var fieldInfo = memberInfo as FieldInfo;
+                var fieldInfo = (FieldInfo)memberInfo;
 
                 return fieldInfo.GetValue;
             }
 
             // if is property, use Emit IL code
-            var propertyInfo = memberInfo as PropertyInfo;
+            var propertyInfo = (PropertyInfo)memberInfo;
             var getMethod = propertyInfo.GetGetMethod(true);
 
             if (getMethod == null) return null;
@@ -245,18 +245,18 @@ namespace UltraLiteDB
         /// Creates a setter delegate for a field or property. Returns null if the property has no set accessor.
         /// Includes special handling for <c>byte[]</c> members that receive <c>ArraySegment&lt;byte&gt;</c> values.
         /// </summary>
-        public static GenericSetter CreateGenericSetter(Type type, MemberInfo memberInfo)
+        public static GenericSetter? CreateGenericSetter(Type type, MemberInfo memberInfo)
         {
             
             // when member is a field, use simple Reflection
             if (memberInfo is FieldInfo)
             {
-                var fieldInfo = memberInfo as FieldInfo;
+                var fieldInfo = (FieldInfo)memberInfo;
 
                 if(fieldInfo.FieldType == typeof(byte[]))
                 {
                     // Special setter for byte arrays
-                    return (target, value) => fieldInfo.SetValue(target, ((ArraySegment<byte>)value).Array);
+                    return (target, value) => fieldInfo.SetValue(target, ((ArraySegment<byte>)value!).Array);
                 }
                 else
                 {
@@ -266,7 +266,7 @@ namespace UltraLiteDB
             }
 
             // if is property, use Emit IL code
-            var propertyInfo = memberInfo as PropertyInfo;
+            var propertyInfo = (PropertyInfo)memberInfo;
 
             var setMethod = propertyInfo.GetSetMethod(true);
 
@@ -275,7 +275,7 @@ namespace UltraLiteDB
             if(propertyInfo.PropertyType == typeof(byte[]))
             {
                 // Special setter for byte arrays
-                return (target, value) => setMethod.Invoke(target, new[] { ((ArraySegment<byte>)value).Array });
+                return (target, value) => setMethod.Invoke(target, new[] { ((ArraySegment<byte>)value!).Array });
             }
             else
             {

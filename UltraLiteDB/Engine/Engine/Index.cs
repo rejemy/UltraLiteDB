@@ -19,7 +19,7 @@ namespace UltraLiteDB
             if (!CollectionIndex.IndexPattern.IsMatch(field)) throw new ArgumentException("Invalid field format pattern: " + CollectionIndex.IndexPattern.ToString(), "field");
             if (field == "_id") return false; // always exists
 
-            return this.Transaction<bool>(collection, true, (col) =>
+            return this.WriteTransaction<bool>(collection, (col) =>
             {
                 // check if index already exists
                 var current = col.GetIndex(field);
@@ -44,7 +44,7 @@ namespace UltraLiteDB
                 {
                     // read binary and deserialize document
                     var buffer = _data.Read(pkNode.DataBlock);
-                    var doc = BsonReader.Deserialize(buffer).AsDocument;
+                    var doc = BsonReader.Deserialize(buffer).AsDocument!;
                     var expr = new BsonFields(index.Field);
 
                     // get value from document
@@ -79,7 +79,7 @@ namespace UltraLiteDB
 
             if (field == "_id") throw UltraLiteException.IndexDropId();
 
-            return this.Transaction<bool>(collection, false, (col) =>
+            return this.Transaction<bool>(collection, (col) =>
             {
                 // no collection, no index
                 if (col == null) return false;

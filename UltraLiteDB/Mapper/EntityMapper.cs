@@ -14,7 +14,7 @@ namespace UltraLiteDB
         /// <summary>
         /// All mapped members (properties/fields) for this entity type.
         /// </summary>
-        public List<MemberMapper> Members { get; set; }
+        public List<MemberMapper> Members { get; set; } = null!;
 
         /// <summary>
         /// Gets the member mapped to the "_id" field, or null if no _id member exists.
@@ -24,13 +24,13 @@ namespace UltraLiteDB
         /// <summary>
         /// The CLR type this mapper describes.
         /// </summary>
-        public Type ForType { get; set; }
+        public Type ForType { get; set; } = null!;
 
         /// <summary>
         /// Lazily-built lookup from BSON field name to <see cref="MemberMapper"/> for O(1) access during deserialization.
         /// Keys are case-insensitive.
         /// </summary>
-        private Dictionary<string, MemberMapper> _fieldLookup;
+        private Dictionary<string, MemberMapper>? _fieldLookup;
 
         /// <summary>
         /// Gets the field-name-to-member lookup dictionary, building it on first access.

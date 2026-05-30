@@ -24,10 +24,10 @@ namespace UltraLiteDB.Tests.Database
             // import data FROM JSON
             using (var db = new UltraLiteDatabase(new MemoryStream()))
             {
-                var data = JsonSerializer.Deserialize(File.ReadAllText(@"C:\Temp\dump-data.json")).AsDocument;
-                foreach(var name in data.Keys)
+				var data = JsonSerializer.Deserialize(File.ReadAllText(@"C:\Temp\dump-data.json")).AsDocument ?? throw new System.Exception("Deserialized data was null");
+				foreach (var name in data.Keys)
                 {
-                    db.GetCollection(name).Insert(data[name].AsArray.Select(x => x.AsDocument));
+                    db.GetCollection(name).Insert(data[name].AsArray!.Select(x => x.AsDocument!));
                 }
             }
         }

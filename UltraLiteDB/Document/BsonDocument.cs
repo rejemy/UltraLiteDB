@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 
 namespace UltraLiteDB
@@ -63,7 +64,7 @@ namespace UltraLiteDB
             }
         }
 
-        internal new Dictionary<string, BsonValue> RawValue => base.RawValue as Dictionary<string, BsonValue>;
+        internal new Dictionary<string, BsonValue> RawValue => (base.RawValue as Dictionary<string, BsonValue>)!;
 
         /// <summary>
         /// Internal page address of this document within the data file. Populated during Find operations.
@@ -74,6 +75,7 @@ namespace UltraLiteDB
         /// Gets or sets a field by key (case-insensitive). Returns <see cref="BsonValue.Null"/> for missing keys.
         /// Setting a null value stores <see cref="BsonValue.Null"/>.
         /// </summary>
+        [AllowNull]
         public override BsonValue this[string key]
         {
             get
@@ -115,7 +117,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Gets a string field value, or null if the key is missing or not a string.
         /// </summary>
-        public string GetString(string key)
+        public string? GetString(string key)
         {
             BsonValue value;
             if(this.RawValue.TryGetValue(key, out value))
@@ -252,7 +254,7 @@ namespace UltraLiteDB
             var thisLength = thisKeys.Length;
 
             var otherDoc = other.AsDocument;
-            var otherKeys = otherDoc.Keys.ToArray();
+            var otherKeys = otherDoc!.Keys.ToArray();
             var otherLength = otherKeys.Length;
 
             var result = 0;

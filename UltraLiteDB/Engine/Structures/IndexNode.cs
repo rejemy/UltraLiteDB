@@ -59,7 +59,7 @@ namespace UltraLiteDB
         /// <summary>
         /// The object value that was indexed
         /// </summary>
-        public BsonValue Key { get; set; }
+        public BsonValue Key { get; set; } = null!;
 
         /// <summary>
         /// Reference for a datablock - the value
@@ -69,7 +69,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Get page reference
         /// </summary>
-        public IndexPage Page { get; set; }
+        public IndexPage Page { get; set; } = null!;
 
         /// <summary>
         /// Returns Next (order == 1) OR Prev (order == -1)
@@ -103,7 +103,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Cached document - if null, use DataBlock
         /// </summary>
-        public BsonDocument CacheDocument { get; set; }
+        public BsonDocument? CacheDocument { get; set; }
 
         public IndexNode(byte level)
         {

@@ -147,7 +147,7 @@ namespace UltraLiteDB
         /// if the given object is equal to the value of this instance. 
         /// Returns false otherwise.
         /// </summary>
-        public bool Equals(ObjectId other)
+        public bool Equals(ObjectId? other)
         {
             return other != null && 
                 this.Timestamp == other.Timestamp &&
@@ -159,7 +159,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Determines whether the specified object is equal to this instance.
         /// </summary>
-        public override bool Equals(object other)
+        public override bool Equals(object? other)
         {
             return Equals(other as ObjectId);
         }
@@ -231,7 +231,7 @@ namespace UltraLiteDB
 
         #region Operators
 
-        public static bool operator ==(ObjectId lhs, ObjectId rhs)
+        public static bool operator ==(ObjectId? lhs, ObjectId? rhs)
         {
             if (lhs is null) return rhs is null;
             if (rhs is null) return false; // don't check type because sometimes different types can be ==
@@ -239,7 +239,7 @@ namespace UltraLiteDB
             return lhs.Equals(rhs);
         }
 
-        public static bool operator !=(ObjectId lhs, ObjectId rhs)
+        public static bool operator !=(ObjectId? lhs, ObjectId? rhs)
         {
             return !(lhs == rhs);
         }

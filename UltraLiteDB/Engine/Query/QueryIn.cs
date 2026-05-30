@@ -20,7 +20,7 @@ namespace UltraLiteDB
         {
             foreach (var value in _values.Distinct())
             {
-                foreach (var node in Query.EQ(this.Field, value).ExecuteIndex(indexer, index))
+                foreach (var node in Query.EQ(this.Field!, value).ExecuteIndex(indexer, index))
                 {
                     yield return node;
                 }

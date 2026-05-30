@@ -23,9 +23,9 @@ namespace UltraLiteDB
             // We need to peek at the first element to check for _t/_type
             // Save position in case we need to re-read
             Type resolvedType = type;
-            object obj = null;
-            EntityMapper entity = null;
-            Dictionary<string, MemberMapper> fieldLookup = null;
+            object? obj = null;
+            EntityMapper? entity = null;
+            Dictionary<string, MemberMapper>? fieldLookup = null;
             bool typeResolved = false;
 
             while (reader.Position < end)
@@ -81,7 +81,7 @@ namespace UltraLiteDB
                 }
 
                 // Look up the member for this field
-                if (fieldLookup.TryGetValue(name, out MemberMapper member) && member.Setter != null)
+                if (fieldLookup!.TryGetValue(name, out MemberMapper member) && member.Setter != null)
                 {
                     if (member.Deserialize != null)
                     {
@@ -153,7 +153,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Read a BSON value and convert directly to the target .NET type
         /// </summary>
-        public static object ReadValueDirect(ByteReader reader, BsonMapper mapper, byte bsonType, Type targetType)
+        public static object? ReadValueDirect(ByteReader reader, BsonMapper mapper, byte bsonType, Type targetType)
         {
             // Handle nullable types
             if (Reflection.IsNullable(targetType))
@@ -302,7 +302,7 @@ namespace UltraLiteDB
             if (isArray)
             {
                 // Read into a temporary list, then convert to array
-                var tempList = new List<object>();
+                var tempList = new List<object?>();
 
                 while (reader.Position < end)
                 {

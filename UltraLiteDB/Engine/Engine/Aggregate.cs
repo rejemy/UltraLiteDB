@@ -25,8 +25,8 @@ namespace UltraLiteDB
 
             if (index == null) return BsonValue.MinValue;
 
-            var head = _indexer.GetNode(index.HeadNode);
-            var next = _indexer.GetNode(head.Next[0]);
+            var head = _indexer.GetExistingNode(index.HeadNode);
+            var next = _indexer.GetExistingNode(head.Next[0]);
 
             if (next.IsHeadTail(index)) return BsonValue.MinValue;
 
@@ -54,8 +54,8 @@ namespace UltraLiteDB
 
             if (index == null) return BsonValue.MaxValue;
 
-            var tail = _indexer.GetNode(index.TailNode);
-            var prev = _indexer.GetNode(tail.Prev[0]);
+            var tail = _indexer.GetExistingNode(index.TailNode);
+            var prev = _indexer.GetExistingNode(tail.Prev[0]);
 
             if (prev.IsHeadTail(index)) return BsonValue.MaxValue;
 
@@ -70,7 +70,7 @@ namespace UltraLiteDB
         /// <param name="collection">The collection name.</param>
         /// <param name="query">Optional query to filter documents. If <c>null</c>, returns total document count.</param>
         /// <returns>The number of matching documents, or 0 if the collection does not exist.</returns>
-        public long Count(string collection, Query query = null)
+        public long Count(string collection, Query? query = null)
         {
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));
 
@@ -87,7 +87,7 @@ namespace UltraLiteDB
             {
                 // count distinct documents
                 return nodes
-                    .Select(x => BsonReader.Deserialize(_data.Read(x.DataBlock)).AsDocument)
+                    .Select(x => BsonReader.Deserialize(_data.Read(x.DataBlock)).AsDocument!)
                     .Where(x => query.FilterDocument(x))
                     .Distinct()
                     .LongCount();
@@ -126,7 +126,7 @@ namespace UltraLiteDB
             {
                 // check if has at least first document
                 return nodes
-                    .Select(x => BsonReader.Deserialize(_data.Read(x.DataBlock)).AsDocument)
+                    .Select(x => BsonReader.Deserialize(_data.Read(x.DataBlock)).AsDocument!)
                     .Where(x => query.FilterDocument(x))
                     .Any();
             }

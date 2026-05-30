@@ -28,7 +28,7 @@
         /// <summary>
         /// Reference to the parent <see cref="DataPage"/>.
         /// </summary>
-        public DataPage Page { get; set; }
+        public DataPage Page { get; set; } = null!;
 
         /// <summary>
         /// Total byte length of this data block on disk (fixed header + data bytes).

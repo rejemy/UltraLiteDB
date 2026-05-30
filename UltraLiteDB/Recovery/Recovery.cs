@@ -33,7 +33,7 @@ namespace UltraLiteDB
                 // try recovery all data pages
                 for (uint i = 1; i < header.LastPageID; i++)
                 {
-                    DataPage dataPage = null;
+                    DataPage? dataPage = null;
 
                     try
                     {
@@ -42,8 +42,8 @@ namespace UltraLiteDB
                         // searching only for DataPage (PageType == 4)
                         if (buffer[4] != 4) continue;
 
-                        dataPage = BasePage.ReadPage(buffer) as DataPage;
-                    }
+						dataPage = BasePage.ReadPage(buffer) as DataPage ?? throw new Exception("pageData was null");
+					}
                     catch (Exception ex)
                     {
                         log.AppendLine($"Page {i} (DataPage) Error: {ex.Message}");
@@ -95,7 +95,7 @@ namespace UltraLiteDB
             // get collection page
             foreach (var col in header.CollectionPages)
             {
-                CollectionPage colPage = null;
+                CollectionPage? colPage = null;
 
                 try
                 {
@@ -105,7 +105,7 @@ namespace UltraLiteDB
 
                     if (page.PageType != PageType.Collection) continue;
 
-                    colPage = page as CollectionPage;
+                    colPage = page as CollectionPage ?? throw new Exception("colPage was null");
                 }
                 catch (Exception ex)
                 {
@@ -149,7 +149,7 @@ namespace UltraLiteDB
 
                 // mark page as readed
                 indexPages[item.Key] = true;
-                IndexPage indexPage = null;
+                IndexPage? indexPage = null;
 
                 try
                 {
@@ -159,7 +159,7 @@ namespace UltraLiteDB
 
                     if (page.PageType != PageType.Index) continue;
 
-                    indexPage = page as IndexPage;
+                    indexPage = page as IndexPage ?? throw new Exception("indexPage was null");
                 }
                 catch(Exception ex)
                 {

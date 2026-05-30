@@ -42,7 +42,7 @@ namespace UltraLiteDB
         #region Ctor
 
         public int ErrorCode { get; private set; }
-        public string Line { get; private set; }
+        public string? Line { get; private set; }
         public long Position { get; private set; }
 
         public UltraLiteException(string message)
@@ -56,7 +56,7 @@ namespace UltraLiteDB
             this.ErrorCode = code;
         }
 
-        internal UltraLiteException (int code, Exception inner, string message, params object[] args)
+        internal UltraLiteException (int code, Exception? inner, string message, params object[] args)
         : base (string.Format (message, args), inner)
         {
             this.ErrorCode = code;
@@ -145,7 +145,7 @@ namespace UltraLiteDB
             };
         }
 
-        internal static UltraLiteException UnexpectedToken(Token token, string expected = null)
+        internal static UltraLiteException UnexpectedToken(Token? token, string? expected = null)
         {
             var position = (token?.Position - (token?.Value?.Length ?? 0)) ?? 0;
             var str = token?.Type == TokenType.EOF ? "[EOF]" : token?.Value ?? "";
@@ -171,7 +171,7 @@ namespace UltraLiteDB
             return new UltraLiteException(DOCUMENT_MAX_DEPTH, "Document has more than {0} nested documents in '{1}'. Check for circular references.", depth, type == null ? "-" : type.Name);
         }
 
-        internal static UltraLiteException InvalidCtor(Type type, Exception inner)
+        internal static UltraLiteException InvalidCtor(Type type, Exception? inner)
         {
             return new UltraLiteException(INVALID_CTOR, inner, "Failed to create instance for type '{0}' from assembly '{1}'. Checks if the class has a public constructor with no parameters.", type.FullName, type.AssemblyQualifiedName);
         }

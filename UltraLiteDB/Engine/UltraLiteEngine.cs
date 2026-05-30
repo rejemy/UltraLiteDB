@@ -17,19 +17,22 @@ namespace UltraLiteDB
 
         private IDiskService _disk;
 
-        private CacheService _cache;
+        // The following services are all created in InitializeServices(), called from the
+        // constructor, and are never re-assigned to null. = null! tells the compiler they
+        // are effectively non-nullable after construction.
+        private CacheService _cache = null!;
 
-        private PageService _pager;
+        private PageService _pager = null!;
 
-        private TransactionService _trans;
+        private TransactionService _trans = null!;
 
-        private IndexService _indexer;
+        private IndexService _indexer = null!;
 
-        private DataService _data;
+        private DataService _data = null!;
 
-        private CollectionService _collections;
+        private CollectionService _collections = null!;
 
-        private AesEncryption _crypto;
+        private AesEncryption? _crypto;
 
         private int _cacheSize;
 
@@ -77,7 +80,7 @@ namespace UltraLiteDB
         /// <param name="filename">Path to the database file.</param>
         /// <param name="password">Password used for AES encryption of data pages.</param>
         /// <param name="journal">Whether to enable write-ahead journaling for crash recovery.</param>
-        public UltraLiteEngine(string filename, string password, bool journal = true)
+        public UltraLiteEngine(string filename, string? password, bool journal = true)
             : this(new FileDiskService(filename, new FileOptions { Journal = journal }), password)
         {
         }
@@ -87,7 +90,7 @@ namespace UltraLiteDB
         /// </summary>
         /// <param name="stream">The stream to use as the database storage.</param>
         /// <param name="password">Optional password for AES encryption of data pages.</param>
-        public UltraLiteEngine(Stream stream, string password = null)
+        public UltraLiteEngine(Stream stream, string? password = null)
             : this(new StreamDiskService(stream), password)
         {
         }
@@ -100,7 +103,7 @@ namespace UltraLiteDB
         /// <param name="timeout">Maximum time to wait for a write lock. Defaults to 1 minute.</param>
         /// <param name="cacheSize">Maximum number of pages to hold in the memory cache. Defaults to 5000.</param>
         /// <param name="log">Optional <see cref="Logger"/> instance for diagnostic output.</param>
-        public UltraLiteEngine(IDiskService disk, string password = null, TimeSpan? timeout = null, int cacheSize = 5000, Logger log = null)
+        public UltraLiteEngine(IDiskService disk, string? password = null, TimeSpan? timeout = null, int cacheSize = 5000, Logger? log = null)
         {
             if (disk == null) throw new ArgumentNullException(nameof(disk));
 
@@ -117,7 +120,7 @@ namespace UltraLiteDB
                 var buffer = _disk.ReadPage(0);
 
                 // create header instance from array bytes
-                var header = BasePage.ReadPage(buffer) as HeaderPage;
+                var header = (HeaderPage)BasePage.ReadPage(buffer);
 
                 // hash password with sha1 or keep as empty byte[20]
                 var sha1 = password == null ? new byte[20] : AesEncryption.HashSHA1(password);
@@ -173,14 +176,25 @@ namespace UltraLiteDB
         /// <param name="name">The collection name, or <c>null</c> to return <c>null</c>.</param>
         /// <param name="addIfNotExits">If <c>true</c>, creates the collection when it does not exist.</param>
         /// <returns>The <see cref="CollectionPage"/>, or <c>null</c> if not found and <paramref name="addIfNotExits"/> is <c>false</c>.</returns>
-        private CollectionPage GetCollectionPage(string name, bool addIfNotExits)
+        private CollectionPage? GetCollectionPage(string? name, bool addIfNotExits)
         {
             if (name == null) return null;
 
+            if (addIfNotExits) return this.GetOrAddCollectionPage(name);
+
             // search my page on collection service
+            return _collections.Get(name);
+        }
+
+        /// <summary>
+        /// Retrieves the <see cref="CollectionPage"/> for the given collection name, creating the collection if it
+        /// does not yet exist. Never returns <c>null</c>.
+        /// </summary>
+        private CollectionPage GetOrAddCollectionPage(string name)
+        {
             var col = _collections.Get(name);
 
-            if (col == null && addIfNotExits)
+            if (col == null)
             {
                 _log.Write(Logger.COMMAND, "create new collection '{0}'", name);
 
@@ -194,23 +208,18 @@ namespace UltraLiteDB
         /// Executes an operation within a write transaction. Persists dirty pages on success or discards them on failure.
         /// </summary>
         /// <typeparam name="T">The return type of the operation.</typeparam>
-        /// <param name="collection">The collection name to operate on.</param>
-        /// <param name="addIfNotExists">If <c>true</c>, creates the collection when it does not exist.</param>
-        /// <param name="action">The action to execute, receiving the <see cref="CollectionPage"/> (may be <c>null</c>).</param>
+        /// <param name="action">The operation to execute.</param>
         /// <returns>The result of the <paramref name="action"/>.</returns>
-        private T Transaction<T>(string collection, bool addIfNotExists, Func<CollectionPage, T> action)
+        private T Transaction<T>(Func<T> action)
         {
-
             try
             {
-                var col = this.GetCollectionPage(collection, addIfNotExists);
-
-                var result = action(col);
+                var result = action();
 
                 _trans.PersistDirtyPages();
 
                 _trans.CheckPoint();
-                
+
                 return result;
             }
             catch (Exception ex)
@@ -222,7 +231,25 @@ namespace UltraLiteDB
 
                 throw;
             }
-            
+        }
+
+        /// <summary>
+        /// Executes an operation against an existing collection (read/optional path). The <see cref="CollectionPage"/>
+        /// passed to <paramref name="action"/> is <c>null</c> when the collection does not exist, or for
+        /// database-level operations where <paramref name="collection"/> is <c>null</c>.
+        /// </summary>
+        private T Transaction<T>(string? collection, Func<CollectionPage?, T> action)
+        {
+            return this.Transaction(() => action(this.GetCollectionPage(collection, false)));
+        }
+
+        /// <summary>
+        /// Executes a write operation against a collection, creating it if it does not exist. The
+        /// <see cref="CollectionPage"/> passed to <paramref name="action"/> is always non-null.
+        /// </summary>
+        private T WriteTransaction<T>(string collection, Func<CollectionPage, T> action)
+        {
+            return this.Transaction(() => action(this.GetOrAddCollectionPage(collection)));
         }
 
         /// <summary>
@@ -244,7 +271,7 @@ namespace UltraLiteDB
         /// <param name="stream">The stream to write the new database into.</param>
         /// <param name="password">Optional password for AES encryption.</param>
         /// <param name="initialSize">Optional initial file size in bytes. If greater than two pages, empty pages are pre-allocated.</param>
-        public static void CreateDatabase(Stream stream, string password = null, long initialSize = 0)
+        public static void CreateDatabase(Stream stream, string? password = null, long initialSize = 0)
         {
             // calculate how many empty pages will be added on disk
             var emptyPages = initialSize == 0 ? 0 : (initialSize - (2 * BasePage.PAGE_SIZE)) / BasePage.PAGE_SIZE;
@@ -298,7 +325,7 @@ namespace UltraLiteDB
 
                     if (password != null)
                     {
-                        bytes = crypto.Encrypt(bytes);
+                        bytes = crypto!.Encrypt(bytes);
                     }
 
                     stream.Write(bytes, 0, BasePage.PAGE_SIZE);

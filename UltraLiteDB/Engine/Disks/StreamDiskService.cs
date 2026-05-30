@@ -15,7 +15,7 @@ namespace UltraLiteDB
         private const int PAGE_TYPE_POSITION = 4;
 
         private Stream _stream;
-        private Logger _log; // will be initialize in "Initialize()"
+        private Logger _log = null!; // assigned in Initialize()
         private bool _disposeStream;
 
         #region Initialize disk
@@ -26,7 +26,7 @@ namespace UltraLiteDB
             _disposeStream = disposeStream;
         }
 
-        public void Initialize(Logger log, string password)
+        public void Initialize(Logger log, string? password)
         {
             // get log instance to disk
             _log = log;

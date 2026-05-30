@@ -10,33 +10,33 @@ namespace UltraLiteDB.Tests.Engine
 
         public interface IMyInterface
         {
-            string Name { get; set; }
+            string? Name { get; set; }
         }
 
         public class MyClassImpl : IMyInterface
         {
-            public string Name { get; set; }
+            public string? Name { get; set; }
         }
 
         // using property as Interface
         public class MyClassWithInterface
         {
             public int Id { get; set; }
-            public IMyInterface Impl { get; set; }
+            public IMyInterface? Impl { get; set; }
         }
 
         // using property as base class (object)
         public class MyClassWithObject
         {
             public int Id { get; set; }
-            public object Impl { get; set; }
+            public object? Impl { get; set; }
         }
 
         // using property as is
         public class MyClassWithClassName
         {
             public int Id { get; set; }
-            public MyClassImpl Impl { get; set; }
+            public MyClassImpl? Impl { get; set; }
         }
 
         #endregion
@@ -64,9 +64,9 @@ namespace UltraLiteDB.Tests.Engine
             var k2 = mapper.ToObject<MyClassWithObject>(bson2);
             var k3 = mapper.ToObject<MyClassWithClassName>(bson3);
 
-            Assert.AreEqual(c1.Impl.Name, k1.Impl.Name);
-            Assert.AreEqual((c2.Impl as MyClassImpl).Name, (k2.Impl as MyClassImpl).Name);
-            Assert.AreEqual(c3.Impl.Name, k3.Impl.Name);
+            Assert.AreEqual(c1.Impl.Name, k1.Impl!.Name);
+            Assert.AreEqual((c2.Impl as MyClassImpl)!.Name, (k2.Impl as MyClassImpl)!.Name);
+            Assert.AreEqual(c3.Impl.Name, k3.Impl!.Name);
         }
     }
 }

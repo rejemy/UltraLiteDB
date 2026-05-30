@@ -41,7 +41,7 @@ namespace UltraLiteDB.Tests.Engine
                 Assert.AreEqual(1, db.Count("col", null));
                 Assert.AreEqual(99, db.UserVersion);
                 Assert.IsNotNull(db.GetIndexes("col").FirstOrDefault(x => x.Field == "name"));
-                Assert.IsTrue(db.GetIndexes("col").FirstOrDefault(x => x.Field == "name").Unique);
+                Assert.IsTrue(db.GetIndexes("col").FirstOrDefault(x => x.Field == "name")!.Unique);
             };
 
             using (var file = new TempFile())

@@ -12,7 +12,7 @@ namespace UltraLiteDB.Tests.Mapper
     public class DictListData
     {
         public int Id { get; set; }
-        public Dictionary<string, List<int?>> MyDict { get; set; }
+        public Dictionary<string, List<int?>>? MyDict { get; set; }
     }
 
     #endregion
@@ -70,7 +70,7 @@ namespace UltraLiteDB.Tests.Mapper
 
             var dest = mapper.ToObject<DictListData>(doc);
 
-            Assert.AreEqual(source.MyDict["one"][0], dest.MyDict["one"][0]);
+            Assert.AreEqual(source.MyDict["one"][0], dest.MyDict!["one"][0]);
             Assert.AreEqual(source.MyDict["one"][1], dest.MyDict["one"][1]);
             Assert.AreEqual(source.MyDict["one"][2], dest.MyDict["one"][2]);
             Assert.AreEqual(source.MyDict["one"][3], dest.MyDict["one"][3]);

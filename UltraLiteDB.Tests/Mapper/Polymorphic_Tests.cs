@@ -11,23 +11,23 @@ namespace UltraLiteDB.Tests.Mapper
     public class MyBase
     {
         public int Id { get; set; }
-        public string Text { get; set; }
+        public string? Text { get; set; }
     }
 
     public class Descendant1 : MyBase
     {
-        public string Field1 { get; set; }
+        public string? Field1 { get; set; }
     }
 
     public class Descendant2 : MyBase
     {
-        public string Field2 { get; set; }
+        public string? Field2 { get; set; }
     }
 
     public class Container
     {
         public Guid Id { get; set; }
-        public List<MyBase> Bases { get; set; }
+        public List<MyBase>? Bases { get; set; }
     }
 
     #endregion

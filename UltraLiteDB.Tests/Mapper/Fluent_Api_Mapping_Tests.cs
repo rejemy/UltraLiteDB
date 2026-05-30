@@ -13,8 +13,8 @@ namespace UltraLiteDB.Tests.Mapper
     public class FluentClass
     {
         public int CurrentKey { get; set; }
-        public Func<string> GetPath { get; set; }
-        public string PropName { get; set; }
+        public Func<string>? GetPath { get; set; }
+        public string? PropName { get; set; }
     }
 
     #endregion

@@ -23,7 +23,7 @@ namespace UltraLiteDB
         /// </summary>
          public ByteReader()
         {
-            _buffer = null;
+            _buffer = null!; // reset state; a buffer must be supplied before reading
             _length = 0;
             _pos = 0;
         }
@@ -46,7 +46,7 @@ namespace UltraLiteDB
         /// <param name="buffer">The array segment to read from.</param>
         public ByteReader(ArraySegment<byte> buffer)
         {
-            _buffer = buffer.Array;
+            _buffer = buffer.Array!;
             _length = buffer.Offset+buffer.Count;
             _pos = buffer.Offset;
         }
@@ -56,7 +56,7 @@ namespace UltraLiteDB
         /// </summary>
         public void Clear()
         {
-            _buffer = null;
+            _buffer = null!; // reset state; a buffer must be supplied before reading
             _length = 0;
             _pos = 0;
         }
@@ -78,7 +78,7 @@ namespace UltraLiteDB
         /// <param name="buffer">The new array segment to read from.</param>
         public void Reset(ArraySegment<byte> buffer)
         {
-            _buffer = buffer.Array;
+            _buffer = buffer.Array!;
             _length = buffer.Offset+buffer.Count;
             _pos = buffer.Offset;
         }

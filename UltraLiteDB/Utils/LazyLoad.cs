@@ -11,7 +11,7 @@ namespace UltraLiteDB
         private readonly object _locker = new object();
         private readonly Func<T> _createValue;
         private bool _isValueCreated;
-        private T _value;
+        private T? _value;
 
         /// <summary>
         /// Gets the lazily initialized value of the current Lazy{T} instance.
@@ -31,7 +31,7 @@ namespace UltraLiteDB
                         }
                     }
                 }
-                return _value;
+                return _value!;
             }
         }
 

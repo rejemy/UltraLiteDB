@@ -13,12 +13,12 @@ namespace UltraLiteDB.Tests.Mapper
 
     public class Derived1 : Base
     {
-        public string Member1 { get; set; }
+        public string? Member1 { get; set; }
     }
 
     public class Derived2 : Base
     {
-        public string Member2 { get; set; }
+        public string? Member2 { get; set; }
     }
 
     #endregion

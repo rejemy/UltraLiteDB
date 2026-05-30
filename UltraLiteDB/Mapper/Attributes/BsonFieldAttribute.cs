@@ -9,7 +9,7 @@ namespace UltraLiteDB
     public class BsonFieldAttribute : Attribute
     {
         /// <summary>The BSON field name to use instead of the CLR property name.</summary>
-        public string Name { get; set; }
+        public string? Name { get; set; }
 
         /// <summary>
         /// Maps this property to the specified BSON field name.

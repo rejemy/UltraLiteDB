@@ -67,7 +67,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Inserts a new index node with a randomly determined level (flip coin). Enforces unique constraints.
         /// </summary>
-        public IndexNode AddNode(CollectionIndex index, BsonValue key, IndexNode last)
+        public IndexNode AddNode(CollectionIndex index, BsonValue key, IndexNode? last)
         {
             var level = this.FlipCoin();
 
@@ -86,7 +86,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Core skip-list insertion: finds the correct position at each level and links the new node.
         /// </summary>
-        private IndexNode AddNode(CollectionIndex index, BsonValue key, byte level, IndexNode last)
+        private IndexNode AddNode(CollectionIndex index, BsonValue key, byte level, IndexNode? last)
         {
             // calc key size
             var keyLength = key.GetBytesCount(false);
@@ -111,10 +111,10 @@ namespace UltraLiteDB
             page.AddNode(node);
 
             // now, let's link my index node on right place
-            var cur = this.GetNode(index.HeadNode);
+            var cur = this.GetExistingNode(index.HeadNode);
 
             // using as cache last
-            IndexNode cache = null;
+            IndexNode? cache = null;
 
             // scan from top left
             for (var i = index.MaxLevel - 1; i >= 0; i--)
@@ -125,8 +125,8 @@ namespace UltraLiteDB
                 // for(; <while_not_this>; <do_this>) { ... }
                 for (; cur.Next[i].IsEmpty == false; cur = cache)
                 {
-                    // get cache for last node
-                    cache = cache != null && cache.Position.Equals(cur.Next[i]) ? cache : this.GetNode(cur.Next[i]);
+                    // get cache for last node (loop guarantees cur.Next[i] is non-empty)
+                    cache = cache != null && cache.Position.Equals(cur.Next[i]) ? cache : this.GetExistingNode(cur.Next[i]);
 
                     // read next node to compare
                     var diff = cache.Key.CompareTo(key);
@@ -168,7 +168,7 @@ namespace UltraLiteDB
                 if (last.NextNode.IsEmpty == false)
                 {
                     // fix link pointer with has more nodes in list
-                    var next = this.GetNode(last.NextNode);
+                    var next = this.GetExistingNode(last.NextNode);
                     next.PrevNode = node.Position;
                     last.NextNode = node.Position;
                     node.PrevNode = last.Position;
@@ -203,7 +203,7 @@ namespace UltraLiteDB
             // go forward
             while (next.IsEmpty == false)
             {
-                var n = this.GetNode(next);
+                var n = this.GetExistingNode(next);
                 next = n.NextNode;
                 yield return n;
             }
@@ -211,7 +211,7 @@ namespace UltraLiteDB
             // go backward
             while (prev.IsEmpty == false)
             {
-                var p = this.GetNode(prev);
+                var p = this.GetExistingNode(prev);
                 prev = p.PrevNode;
                 yield return p;
             }
@@ -223,7 +223,7 @@ namespace UltraLiteDB
         /// </summary>
         public void Delete(CollectionIndex index, PageAddress nodeAddress)
         {
-            var node = this.GetNode(nodeAddress);
+            var node = this.GetExistingNode(nodeAddress);
             var page = node.Page;
 
             // mark page as dirty here because, if deleted, page type will change
@@ -318,11 +318,22 @@ namespace UltraLiteDB
         /// <summary>
         /// Retrieves an <see cref="IndexNode"/> by its <see cref="PageAddress"/>. Returns null if the address is empty.
         /// </summary>
-        public IndexNode GetNode(PageAddress address)
+        public IndexNode? GetNode(PageAddress address)
         {
             if (address.IsEmpty) return null;
             var page = _pager.GetPage<IndexPage>(address.PageID);
             return page.GetNode(address.Index);
+        }
+
+        /// <summary>
+        /// Retrieves an <see cref="IndexNode"/> that is required to exist: a skip-list sentinel, or an
+        /// address already verified non-empty by the caller. Throws if the node is missing, surfacing
+        /// index corruption as a diagnosable error rather than a <see cref="NullReferenceException"/>.
+        /// </summary>
+        public IndexNode GetExistingNode(PageAddress address)
+        {
+            return this.GetNode(address)
+                ?? throw new UltraLiteException("Index node not found at expected address " + address + " (corrupt index).");
         }
 
         /// <summary>
@@ -346,11 +357,11 @@ namespace UltraLiteDB
         /// </summary>
         public IEnumerable<IndexNode> FindAll(CollectionIndex index, int order)
         {
-            var cur = this.GetNode(order == Query.Ascending ? index.HeadNode : index.TailNode);
+            var cur = this.GetExistingNode(order == Query.Ascending ? index.HeadNode : index.TailNode);
 
             while (!cur.NextPrev(0, order).IsEmpty)
             {
-                cur = this.GetNode(cur.NextPrev(0, order));
+                cur = this.GetExistingNode(cur.NextPrev(0, order));
 
                 // stop if node is head/tail
                 if (cur.IsHeadTail(index)) yield break;
@@ -363,15 +374,15 @@ namespace UltraLiteDB
         /// Seeks to the first index node matching the value. If <paramref name="sibling"/> is true and no exact match exists,
         /// returns the nearest node. For non-unique indexes, walks back to the first occurrence of the value.
         /// </summary>
-        public IndexNode Find(CollectionIndex index, BsonValue value, bool sibling, int order)
+        public IndexNode? Find(CollectionIndex index, BsonValue value, bool sibling, int order)
         {
-            var cur = this.GetNode(order == Query.Ascending ? index.HeadNode : index.TailNode);
+            var cur = this.GetExistingNode(order == Query.Ascending ? index.HeadNode : index.TailNode);
 
             for (var i = index.MaxLevel - 1; i >= 0; i--)
             {
-                for (; cur.NextPrev(i, order).IsEmpty == false; cur = this.GetNode(cur.NextPrev(i, order)))
+                for (; cur.NextPrev(i, order).IsEmpty == false; cur = this.GetExistingNode(cur.NextPrev(i, order)))
                 {
-                    var next = this.GetNode(cur.NextPrev(i, order));
+                    var next = this.GetExistingNode(cur.NextPrev(i, order));
                     var diff = next.Key.CompareTo(value);
 
                     if (diff == order && (i > 0 || !sibling)) break;
@@ -404,7 +415,7 @@ namespace UltraLiteDB
             while (cur.Key.CompareTo(value) == 0)
             {
                 last = cur;
-                cur = this.GetNode(cur.NextPrev(0, order));
+                cur = this.GetExistingNode(cur.NextPrev(0, order));
                 if (cur.IsHeadTail(index)) break;
             }
 

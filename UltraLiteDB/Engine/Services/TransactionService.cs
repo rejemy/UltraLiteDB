@@ -10,13 +10,13 @@ namespace UltraLiteDB
     internal class TransactionService
     {
         private IDiskService _disk;
-        private AesEncryption _crypto;
+        private AesEncryption? _crypto;
         private PageService _pager;
         private CacheService _cache;
         private Logger _log;
         private int _cacheSize;
 
-        internal TransactionService(IDiskService disk, AesEncryption crypto, PageService pager, CacheService cache, int cacheSize, Logger log)
+        internal TransactionService(IDiskService disk, AesEncryption? crypto, PageService pager, CacheService cache, int cacheSize, Logger log)
         {
             _disk = disk;
             _crypto = crypto;
@@ -83,7 +83,8 @@ namespace UltraLiteDB
             }
 
             // write header page first. if header.Recovery == true, this ensures it's written to disk *before* we start changing pages
-            var headerPage = _cache.GetPage(0);
+            // page 0 (header) is always cached during a transaction
+            var headerPage = _cache.GetPage(0)!;
             var headerBuffer = headerPage.WritePage();
             _disk.WritePage(0, headerBuffer);
             _disk.Flush();
@@ -139,7 +140,7 @@ namespace UltraLiteDB
 
 
             // double check in header need recovery (could be already recover from another thread)
-            var header = BasePage.ReadPage(_disk.ReadPage(0)) as HeaderPage;
+            var header = (HeaderPage)BasePage.ReadPage(_disk.ReadPage(0));
 
             if (header.Recovery == false) return;
 

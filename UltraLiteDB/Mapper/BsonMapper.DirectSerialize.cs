@@ -32,7 +32,7 @@ namespace UltraLiteDB
         /// </summary>
         /// <param name="type">The declared type (used for polymorphic type resolution).</param>
         /// <param name="entity">The object to serialize.</param>
-        public virtual byte[] SerializeToBytes(Type type, object entity)
+        public virtual byte[] SerializeToBytes(Type type, object? entity)
         {
             if (entity == null) throw new ArgumentNullException(nameof(entity));
 
@@ -59,7 +59,7 @@ namespace UltraLiteDB
         /// <param name="type">The declared type (used for polymorphic type resolution).</param>
         /// <param name="entity">The object to serialize.</param>
         /// <param name="writer">The writer to output BSON bytes to.</param>
-        public virtual void SerializeToBytes(Type type, object entity, ByteWriter writer)
+        public virtual void SerializeToBytes(Type type, object? entity, ByteWriter writer)
         {
             if (entity == null) throw new ArgumentNullException(nameof(entity));
 

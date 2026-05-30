@@ -19,7 +19,7 @@ namespace UltraLiteDB
             }
             set
             {
-                this.Transaction<bool>(null, false, (col) =>
+                this.Transaction<bool>(null, (col) =>
                 {
                     var header = _pager.GetPage<HeaderPage>(0);
 

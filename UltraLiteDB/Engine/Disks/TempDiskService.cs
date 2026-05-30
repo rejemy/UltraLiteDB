@@ -15,8 +15,8 @@ namespace UltraLiteDB
         /// </summary>
         private const int PAGE_TYPE_POSITION = 4;
 
-        private FileStream _stream;
-        private string _filename;
+        private FileStream? _stream;
+        private string? _filename;
 
         #region Initialize/Dispose disk
 
@@ -24,7 +24,7 @@ namespace UltraLiteDB
         {
         }
 
-        public void Initialize(Logger log, string password)
+        public void Initialize(Logger log, string? password)
         {
             // datafile will be created only when used
         }
@@ -49,7 +49,7 @@ namespace UltraLiteDB
                 _stream = null;
 
                 // after release stream, delete datafile
-                FileHelper.TryDelete(_filename);
+                FileHelper.TryDelete(_filename!);
             }
         }
 
@@ -81,7 +81,7 @@ namespace UltraLiteDB
             var position = BasePage.GetSizeOfPages(pageID);
 
             // position cursor
-            if (_stream.Position != position)
+            if (_stream!.Position != position)
             {
                 _stream.Seek(position, SeekOrigin.Begin);
             }
@@ -102,7 +102,7 @@ namespace UltraLiteDB
             var position = BasePage.GetSizeOfPages(pageID);
 
             // position cursor
-            if (_stream.Position != position)
+            if (_stream!.Position != position)
             {
                 _stream.Seek(position, SeekOrigin.Begin);
             }
@@ -118,7 +118,7 @@ namespace UltraLiteDB
             if (_stream == null) this.InternalInitialize();
 
             // fileSize parameter tell me final size of data file - helpful to extend first datafile
-            _stream.SetLength(fileSize);
+            _stream!.SetLength(fileSize);
         }
 
         /// <summary>

@@ -125,13 +125,14 @@ namespace UltraLiteDB
         {
             var type = typeof(T);
 
-            // casting using "as T" #90 / thanks @Skysper
-            if (type == typeof(HeaderPage)) return new HeaderPage() as T;
-            if (type == typeof(CollectionPage)) return new CollectionPage(pageID) as T;
-            if (type == typeof(IndexPage)) return new IndexPage(pageID) as T;
-            if (type == typeof(DataPage)) return new DataPage(pageID) as T;
-            if (type == typeof(ExtendPage)) return new ExtendPage(pageID) as T;
-            if (type == typeof(EmptyPage)) return new EmptyPage(pageID) as T;
+            // each branch is guarded by the matching type check, so the cast always succeeds;
+            // (T)(object) forces it (throws on a real mismatch) instead of "as T" silently returning null
+            if (type == typeof(HeaderPage)) return (T)(object)new HeaderPage();
+            if (type == typeof(CollectionPage)) return (T)(object)new CollectionPage(pageID);
+            if (type == typeof(IndexPage)) return (T)(object)new IndexPage(pageID);
+            if (type == typeof(DataPage)) return (T)(object)new DataPage(pageID);
+            if (type == typeof(ExtendPage)) return (T)(object)new ExtendPage(pageID);
+            if (type == typeof(EmptyPage)) return (T)(object)new EmptyPage(pageID);
 
             throw new Exception("Invalid base page type T");
         }

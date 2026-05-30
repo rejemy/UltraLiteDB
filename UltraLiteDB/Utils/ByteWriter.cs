@@ -28,7 +28,7 @@ namespace UltraLiteDB
         /// </summary>
         public ByteWriter()
         {
-            _buffer = null;
+            _buffer = null!; // reset state; a buffer must be supplied before writing
             _pos = 0;
         }
 
@@ -59,7 +59,7 @@ namespace UltraLiteDB
         /// <param name="buffer">The array segment to write into.</param>
         public ByteWriter(ArraySegment<byte> buffer)
         {
-            _buffer = buffer.Array;
+            _buffer = buffer.Array!;
             _pos = buffer.Offset;
         }
 
@@ -68,7 +68,7 @@ namespace UltraLiteDB
         /// </summary>
         public void Clear()
         {
-            _buffer = null;
+            _buffer = null!; // reset state; a buffer must be supplied before writing
             _pos = 0;
         }
 
@@ -88,7 +88,7 @@ namespace UltraLiteDB
         /// <param name="buffer">The new array segment to write into.</param>
         public void Reset(ArraySegment<byte> buffer)
         {
-            _buffer = buffer.Array;
+            _buffer = buffer.Array!;
             _pos = buffer.Offset;
         }
 
@@ -272,8 +272,8 @@ namespace UltraLiteDB
 
                 case BsonType.String: this.Write((String)value.RawValue, length); break;
 
-                case BsonType.Document: BsonWriter.WriteDocument(this, value.AsDocument); break;
-                case BsonType.Array: BsonWriter.WriteArray(this, value.AsArray); break;
+                case BsonType.Document: BsonWriter.WriteDocument(this, value.AsDocument!); break;
+                case BsonType.Array: BsonWriter.WriteArray(this, value.AsArray!); break;
 
                 case BsonType.Binary: this.Write((Byte[])value.RawValue); break;
                 case BsonType.ObjectId: this.Write((ObjectId)value.RawValue); break;

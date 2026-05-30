@@ -28,7 +28,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Name of collection
         /// </summary>
-        public string CollectionName { get; set; }
+        public string CollectionName { get; set; } = null!;
 
         /// <summary>
         /// Get a reference for the free list data page - its private list per collection - each DataPage contains only data for 1 collection (no mixing)
@@ -170,7 +170,7 @@ namespace UltraLiteDB
         /// </summary>
         /// <param name="field">The field name to look up.</param>
         /// <returns>The matching index, or null if no index exists for the field.</returns>
-        public CollectionIndex GetIndex(string field)
+        public CollectionIndex? GetIndex(string? field)
         {
             return this.Indexes.FirstOrDefault(x => x.Field == field);
         }

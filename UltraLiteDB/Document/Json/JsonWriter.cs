@@ -61,11 +61,11 @@ namespace UltraLiteDB
                     break;
 
                 case BsonType.Array:
-                    this.WriteArray(value.AsArray);
+                    this.WriteArray(value.AsArray!);
                     break;
 
                 case BsonType.Document:
-                    this.WriteObject(value.AsDocument);
+                    this.WriteObject(value.AsDocument!);
                     break;
 
                 case BsonType.Boolean:
@@ -147,9 +147,9 @@ namespace UltraLiteDB
                 var item = arr[i];
 
                 // do not do this tests if is not pretty format - to better performance
-                if (this.Pretty && item != null)
+                if (this.Pretty && item)
                 {
-                    if (!((item.IsDocument && item.AsDocument.Keys.Any()) || (item.IsArray && item.AsArray.Count > 0)))
+                    if (!((item.IsDocument && item.AsDocument!.Keys.Any()) || (item.IsArray && item.AsArray!.Count > 0)))
                     {
                         this.WriteIndent();
                     }
@@ -247,7 +247,7 @@ namespace UltraLiteDB
             {
                 _writer.Write(' ');
 
-                if (value != null && ((value.IsDocument && value.AsDocument.Keys.Any()) || (value.IsArray && value.AsArray.Count > 0)))
+                if ((value.IsDocument && value.AsDocument!.Keys.Any()) || (value.IsArray && value.AsArray!.Count > 0))
                 {
                     this.WriteNewLine();
                 }

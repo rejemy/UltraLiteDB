@@ -13,7 +13,7 @@ namespace UltraLiteDB
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));
             if (doc == null) throw new ArgumentNullException(nameof(doc));
 
-            Transaction<int>(collection, true, (col) =>
+            WriteTransaction<int>(collection, (col) =>
             {
                 this.InsertDocument(col, doc, autoId);
                 return 1;
@@ -30,7 +30,7 @@ namespace UltraLiteDB
             if (collection.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(collection));
             if (docs == null) throw new ArgumentNullException(nameof(docs));
 
-            return this.Transaction<int>(collection, true, (col) =>
+            return this.WriteTransaction<int>(collection, (col) =>
             {
                 var count = 0;
 

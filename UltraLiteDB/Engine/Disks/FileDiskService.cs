@@ -22,10 +22,10 @@ namespace UltraLiteDB
         internal const int LOCK_READ_LENGTH = 1;
         internal const int LOCK_WRITE_LENGTH = 3000;
 
-        private FileStream _stream;
+        private FileStream _stream = null!; // assigned in Initialize(), nulled only in Dispose()
         private string _filename;
 
-        private Logger _log; // will be initialize in "Initialize()"
+        private Logger _log = null!; // assigned in Initialize()
         private FileOptions _options;
 
         private Random _lockReadRand = new Random();
@@ -48,7 +48,7 @@ namespace UltraLiteDB
             _options = options;
         }
 
-        public void Initialize(Logger log, string password)
+        public void Initialize(Logger log, string? password)
         {
             // get log instance to disk
             _log = log;
@@ -77,7 +77,7 @@ namespace UltraLiteDB
             {
                 _log.Write(Logger.DISK, "close datafile '{0}'", Path.GetFileName(_filename));
                 _stream.Dispose();
-                _stream = null;
+                _stream = null!;
             }
         }
 

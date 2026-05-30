@@ -21,7 +21,7 @@ namespace UltraLiteDB
             var id = _engine.Value.Insert(_name, doc, _autoId);
 
             // checks if must update _id value in entity
-            if (removed && _id != null)
+            if (removed && _id != null && _id.Setter != null)
             {
                 _id.Setter(document, id.RawValue);
             }
@@ -97,9 +97,9 @@ namespace UltraLiteDB
 
                 yield return doc;
 
-                if (removed && _id != null)
+                if (removed && _id != null && _id.Setter != null)
                 {
-                    _id.Setter(document, doc["_id"].RawValue);
+                    _id.Setter(document!, doc["_id"].RawValue);
                 }
             }
         }
@@ -115,9 +115,9 @@ namespace UltraLiteDB
 
             yield return doc;
 
-            if (removed && _id != null)
+            if (removed && _id != null && _id.Setter != null)
             {
-                _id.Setter(document, doc["_id"].RawValue);
+                _id.Setter(document!, doc["_id"].RawValue);
             }
         }
 

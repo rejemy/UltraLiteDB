@@ -12,7 +12,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Open or create the data file and initialize internal streams. Must be called before any read/write operations.
         /// </summary>
-        void Initialize(Logger log, string password);
+        void Initialize(Logger log, string? password);
 
         /// <summary>
         /// Read a single page (BasePage.PAGE_SIZE bytes) from the data file.

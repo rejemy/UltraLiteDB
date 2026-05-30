@@ -11,7 +11,7 @@ namespace UltraLiteDB
         /// </summary>
         /// <param name="password">New password, or null to remove encryption.</param>
         /// <param name="tempDisk">Temporary disk for the compacted copy; defaults to an in-memory stream.</param>
-        public long Shrink(string password = null, IDiskService tempDisk = null)
+        public long Shrink(string? password = null, IDiskService? tempDisk = null)
         {
             var originalSize = _disk.FileLength;
 
@@ -34,9 +34,10 @@ namespace UltraLiteDB
                     engine.InsertBulk(collectionName, docs);
 
                     // fix collection sequence number
-                    var seq = _collections.Get(collectionName).Sequence;
+                    // collectionName comes from GetCollectionNames(), so the collection exists
+                    var seq = _collections.Get(collectionName)!.Sequence;
 
-                    engine.Transaction(collectionName, true, (col) =>
+                    engine.WriteTransaction(collectionName, (col) =>
                     {
                         col.Sequence = seq;
                         engine._pager.SetDirty(col);
@@ -52,7 +53,7 @@ namespace UltraLiteDB
                 _disk.SetLength(temp.FileLength);
 
                 // read new header page to start copy
-                var header = BasePage.ReadPage(temp.ReadPage(0)) as HeaderPage;
+                var header = (HeaderPage)BasePage.ReadPage(temp.ReadPage(0));
 
                 // copy (as is) all pages from temp disk to original disk
                 for (uint i = 0; i <= header.LastPageID; i++)

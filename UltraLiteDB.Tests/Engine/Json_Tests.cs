@@ -23,11 +23,11 @@ namespace UltraLiteDB.Tests.Engine
             obj["Qtd"] = 3;
             obj["Description"] = "Big beer package";
             obj["Unit"] = 1299.995;
-            doc["Items"].AsArray.Add(obj);
-            doc["Items"].AsArray.Add("string-one");
-            doc["Items"].AsArray.Add(null);
-            doc["Items"].AsArray.Add(true);
-            doc["Items"].AsArray.Add(DateTime.Now);
+            doc["Items"].AsArray!.Add(obj);
+            doc["Items"].AsArray!.Add("string-one");
+            doc["Items"].AsArray!.Add(null);
+            doc["Items"].AsArray!.Add(true);
+            doc["Items"].AsArray!.Add(DateTime.Now);
 
 
             return doc;
@@ -40,12 +40,12 @@ namespace UltraLiteDB.Tests.Engine
 
             var json = JsonSerializer.Serialize(o);
 
-            var doc = JsonSerializer.Deserialize(json).AsDocument;
+            var doc = JsonSerializer.Deserialize(json).AsDocument ?? throw new Exception("Could not deserialize json");
 
             Assert.AreEqual(o["Special"].AsString, doc["Special"].AsString);
             Assert.AreEqual(o["Date"].AsDateTime, doc["Date"].AsDateTime);
             Assert.AreEqual(o["CustomerId"].AsGuid, doc["CustomerId"].AsGuid);
-            Assert.AreEqual(o["Items"].AsArray.Count, doc["Items"].AsArray.Count);
+            Assert.AreEqual(o["Items"].AsArray!.Count, doc["Items"].AsArray!.Count);
             Assert.AreEqual(123, doc["_id"].AsInt32);
             Assert.AreEqual(o["_id"].AsInt64, doc["_id"].AsInt64);
         }

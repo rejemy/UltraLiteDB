@@ -25,8 +25,8 @@ namespace UltraLiteDB.Tests.Engine
 
             using (var db = new UltraLiteEngine(mem))
             {
-                var john = db.Find("col", Query.EQ("_id", 1)).FirstOrDefault();
-                var doe = db.Find("col", Query.EQ("_id", 2)).FirstOrDefault();
+                var john = db.Find("col", Query.EQ("_id", 1)).FirstOrDefault() ?? throw new Exception("item 1 not found");
+                var doe = db.Find("col", Query.EQ("_id", 2)).FirstOrDefault() ?? throw new Exception("item 2 not found");
 
                 Assert.AreEqual("John", john["name"].AsString);
                 Assert.AreEqual("Doe", doe["name"].AsString);

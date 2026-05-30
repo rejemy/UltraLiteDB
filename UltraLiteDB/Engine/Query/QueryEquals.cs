@@ -27,7 +27,7 @@ namespace UltraLiteDB
             if (index.Unique == false)
             {
                 // navigate using next[0] do next node - if equals, returns
-                while (!node.Next[0].IsEmpty && ((node = indexer.GetNode(node.Next[0])).Key.CompareTo(_value) == 0))
+                while (!node.Next[0].IsEmpty && ((node = indexer.GetExistingNode(node.Next[0])).Key.CompareTo(_value) == 0))
                 {
                     if (node.IsHeadTail(index)) yield break;
 

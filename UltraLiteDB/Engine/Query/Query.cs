@@ -10,16 +10,16 @@ namespace UltraLiteDB
     public abstract class Query
     {
         /// <summary>The field name this query operates on.</summary>
-        public string Field { get; private set; }
+        public string? Field { get; private set; }
 
         /// <summary>Parsed field expression used for evaluating document values during full scan.</summary>
-        internal BsonFields Expression { get; set; }
+        internal BsonFields Expression { get; set; } = null!;
         /// <summary>True if this query will use an index for execution.</summary>
         internal virtual bool UseIndex { get; set; }
         /// <summary>True if this query requires full-scan document filtering.</summary>
         internal virtual bool UseFilter { get; set; }
 
-        internal Query(string field)
+        internal Query(string? field)
         {
             this.Field = field;
         }
@@ -53,7 +53,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Returns all documents where the field equals the value (=). Uses Index Seek when an index exists.
         /// </summary>
-        public static Query EQ(string field, BsonValue value)
+        public static Query EQ(string field, BsonValue? value)
         {
             if (field.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(field));
 
@@ -63,7 +63,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Returns all documents where the field is less than the value (&lt;).
         /// </summary>
-        public static Query LT(string field, BsonValue value)
+        public static Query LT(string field, BsonValue? value)
         {
             if (field.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(field));
 
@@ -73,7 +73,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Returns all documents where the field is less than or equal to the value (&lt;=).
         /// </summary>
-        public static Query LTE(string field, BsonValue value)
+        public static Query LTE(string field, BsonValue? value)
         {
             if (field.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(field));
 
@@ -83,7 +83,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Returns all documents where the field is greater than the value (&gt;).
         /// </summary>
-        public static Query GT(string field, BsonValue value)
+        public static Query GT(string field, BsonValue? value)
         {
             if (field.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(field));
 
@@ -93,7 +93,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Returns all documents where the field is greater than or equal to the value (&gt;=).
         /// </summary>
-        public static Query GTE(string field, BsonValue value)
+        public static Query GTE(string field, BsonValue? value)
         {
             if (field.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(field));
 
@@ -103,7 +103,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Returns all documents where the field value falls between start and end (inclusive/exclusive configurable).
         /// </summary>
-        public static Query Between(string field, BsonValue start, BsonValue end, bool startEquals = true, bool endEquals = true)
+        public static Query Between(string field, BsonValue ?start, BsonValue? end, bool startEquals = true, bool endEquals = true)
         {
             if (field.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(field));
 
@@ -135,7 +135,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Returns all documents where the field does not equal the value (!=). Uses Index Scan.
         /// </summary>
-        public static Query Not(string field, BsonValue value)
+        public static Query Not(string field, BsonValue? value)
         {
             if (field.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(field));
             return new QueryNotEquals(field, value ?? BsonValue.Null);
@@ -157,7 +157,6 @@ namespace UltraLiteDB
         public static Query In(string field, BsonArray value)
         {
             if (field.IsNullOrWhiteSpace()) throw new ArgumentNullException(nameof(field));
-            if (value == null) throw new ArgumentNullException(nameof(value));
 
             return new QueryIn(field, value.RawValue);
         }
@@ -210,7 +209,7 @@ namespace UltraLiteDB
                 var l = left as QueryGreater;
                 var r = right as QueryLess;
 
-                return Between(l.Field, l.Value, r.Value, l.IsEquals, r.IsEquals);
+                return Between(l!.Field!, l.Value, r!.Value, l.IsEquals, r.IsEquals);
             }
 
             return new QueryAnd(left, right);

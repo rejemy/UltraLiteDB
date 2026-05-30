@@ -50,6 +50,9 @@ namespace UltraLiteDB
             {
                 if (member.Getter == null) continue;
 
+                // members excluded from mapping have a null FieldName
+                if (member.FieldName == null) continue;
+
                 var value = member.Getter(obj);
 
                 if (value == null && !mapper.SerializeNullValues && member.FieldName != "_id") continue;
@@ -81,7 +84,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Write a single value as a BSON element (type byte + CString key + value bytes)
         /// </summary>
-        public static void WriteElementDirect(ByteWriter writer, BsonMapper mapper, string key, Type declaredType, object value, int depth)
+        public static void WriteElementDirect(ByteWriter writer, BsonMapper mapper, string key, Type declaredType, object? value, int depth)
         {
             if (value == null)
             {

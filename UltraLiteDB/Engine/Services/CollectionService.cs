@@ -28,7 +28,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Gets a collection page by name. Returns null if the collection does not exist.
         /// </summary>
-        public CollectionPage Get(string name)
+        public CollectionPage? Get(string name)
         {
             if (string.IsNullOrEmpty(name)) throw new ArgumentNullException(nameof(name));
 

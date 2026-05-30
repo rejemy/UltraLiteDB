@@ -15,7 +15,8 @@ namespace UltraLiteDB
 
             foreach(var colName in header.CollectionPages.Keys)
             {
-                var col = this.GetCollectionPage(colName, false);
+                // colName comes from the header's collection list, so the page exists
+                var col = this.GetCollectionPage(colName, false)!;
 
                 var colDoc = new BsonDocument
                 {

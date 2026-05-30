@@ -106,10 +106,7 @@ namespace UltraLiteDB
         /// </summary>
         public void Dispose()
         {
-            if (_aes != null)
-            {
-                _aes = null;
-            }
+            _aes.Dispose();
         }
     }
 }

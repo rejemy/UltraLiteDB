@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Text;
 using System.Collections;
 using System.Collections.Generic;
@@ -38,6 +39,8 @@ namespace UltraLiteDB
 
         /// <summary>
         /// Gets the underlying .NET value (e.g. int, string, Dictionary, List).
+        /// Null only for the <see cref="BsonType.Null"/>/sentinel types; always accessed
+        /// through the type-guarded As* accessors, so it is treated as non-nullable.
         /// </summary>
         internal virtual object RawValue { get; }
 
@@ -46,7 +49,7 @@ namespace UltraLiteDB
         public BsonValue()
         {
             this.Type = BsonType.Null;
-            this.RawValue = null;
+            this.RawValue = null!;
         }
 
         public BsonValue(Int32 value)
@@ -79,28 +82,28 @@ namespace UltraLiteDB
             this.RawValue = value;
         }
 
-        public BsonValue(String value)
+        public BsonValue(String? value)
         {
             this.Type = value == null ? BsonType.Null : BsonType.String;
-            this.RawValue = value;
+            this.RawValue = value!;
         }
 
-        public BsonValue(Byte[] value)
+        public BsonValue(Byte[]? value)
         {
             this.Type = value == null ? BsonType.Null : BsonType.Binary;
-            this.RawValue = value == null ? null : new ArraySegment<byte>(value);
+            this.RawValue = value == null ? null! : new ArraySegment<byte>(value);
         }
 
         public BsonValue(ArraySegment<byte> value)
         {
             this.Type = value.Array == null ? BsonType.Null : BsonType.Binary;
-            this.RawValue = value.Array == null ? null : value;
+            this.RawValue = value.Array == null ? null! : value;
         }
 
-        public BsonValue(ObjectId value)
+        public BsonValue(ObjectId? value)
         {
             this.Type = value == null ? BsonType.Null : BsonType.ObjectId;
-            this.RawValue = value;
+            this.RawValue = value!;
         }
 
         public BsonValue(Guid value)
@@ -121,10 +124,10 @@ namespace UltraLiteDB
             this.RawValue = value.Truncate();
         }
 
-        public BsonValue(BsonValue value)
+        public BsonValue(BsonValue? value)
         {
             this.Type = value == null ? BsonType.Null : value.Type;
-            this.RawValue = value.RawValue;
+            this.RawValue = value?.RawValue!;
         }
         
         /// <summary>
@@ -166,10 +169,10 @@ namespace UltraLiteDB
             return (T)this.RawValue;
         }
 
-        protected BsonValue(BsonType type, object rawValue)
+        protected BsonValue(BsonType type, object? rawValue)
         {
             this.Type = type;
-            this.RawValue = rawValue;
+            this.RawValue = rawValue!;
         }
 
         #endregion
@@ -179,6 +182,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Gets or sets a field by name. Only valid on <see cref="BsonDocument"/>; throws on other types.
         /// </summary>
+        [AllowNull]
         public virtual BsonValue this[string name]
         {
             get => throw new InvalidOperationException("Cannot access non-document type value on " + this.RawValue);
@@ -188,6 +192,7 @@ namespace UltraLiteDB
         /// <summary>
         /// Gets or sets a value by array index. Only valid on <see cref="BsonArray"/>; throws on other types.
         /// </summary>
+        [AllowNull]
         public virtual BsonValue this[int index]
         {
             get => throw new InvalidOperationException("Cannot access non-array type value on " + this.RawValue);
@@ -199,10 +204,10 @@ namespace UltraLiteDB
         #region Convert types
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        public BsonArray AsArray => this as BsonArray;
+        public BsonArray? AsArray => this as BsonArray;
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
-        public BsonDocument AsDocument => this as BsonDocument;
+        public BsonDocument? AsDocument => this as BsonDocument;
 
         [DebuggerBrowsable(DebuggerBrowsableState.Never)]
         public ArraySegment<byte> AsBinary => (ArraySegment<byte>)this.RawValue;
@@ -308,8 +313,8 @@ namespace UltraLiteDB
                     case BsonType.Double: return this.AsDouble == default;
                     case BsonType.Decimal: return this.AsDecimal == default;
                     case BsonType.String: return this.AsString.IsNullOrEmpty();
-                    case BsonType.Document: return this.AsDocument.Count == 0;
-                    case BsonType.Array: return this.AsArray.Count == 0;
+                    case BsonType.Document: return this.AsDocument!.Count == 0;
+                    case BsonType.Array: return this.AsArray!.Count == 0;
                     case BsonType.Binary: return this.AsBinary.Count == 0;
                     case BsonType.ObjectId: return this.AsObjectId == ObjectId.Empty;
                     case BsonType.Guid: return this.AsGuid == default;
@@ -397,7 +402,7 @@ namespace UltraLiteDB
         }
 
         // String
-        public static implicit operator BsonValue(String value)
+        public static implicit operator BsonValue(String? value)
         {
             return new BsonValue(value);
         }
@@ -581,8 +586,8 @@ namespace UltraLiteDB
 
                 case BsonType.String: return collation.Compare(this.AsString, other.AsString);
 
-                case BsonType.Document: return this.AsDocument.CompareTo(other);
-                case BsonType.Array: return this.AsArray.CompareTo(other);
+                case BsonType.Document: return this.AsDocument!.CompareTo(other);
+                case BsonType.Array: return this.AsArray!.CompareTo(other);
 
                 case BsonType.Binary: return this.AsBinary.BinaryCompareTo(other.AsBinary);
                 case BsonType.ObjectId: return this.AsObjectId.CompareTo(other.AsObjectId);
@@ -607,7 +612,7 @@ namespace UltraLiteDB
 
         #region Operators
 
-        public static bool operator ==(BsonValue lhs, BsonValue rhs)
+        public static bool operator ==(BsonValue? lhs, BsonValue? rhs)
         {
             if (object.ReferenceEquals(lhs, null)) return object.ReferenceEquals(rhs, null) || rhs.IsNull;
             if (object.ReferenceEquals(rhs, null)) return object.ReferenceEquals(lhs, null) || lhs.IsNull;
@@ -615,7 +620,7 @@ namespace UltraLiteDB
             return lhs.Equals(rhs);
         }
 
-        public static bool operator !=(BsonValue lhs, BsonValue rhs)
+        public static bool operator !=(BsonValue? lhs, BsonValue? rhs)
         {
             return !(lhs == rhs);
         }
@@ -691,8 +696,8 @@ namespace UltraLiteDB
                 case BsonType.Boolean: return 1;
                 case BsonType.DateTime: return 8;
 
-                case BsonType.Document: return this.AsDocument.GetBytesCount(recalc);
-                case BsonType.Array: return this.AsArray.GetBytesCount(recalc);
+                case BsonType.Document: return this.AsDocument!.GetBytesCount(recalc);
+                case BsonType.Array: return this.AsArray!.GetBytesCount(recalc);
             }
 
             throw new ArgumentException();

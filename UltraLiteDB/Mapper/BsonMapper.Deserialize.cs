@@ -14,7 +14,7 @@ namespace UltraLiteDB
         /// </summary>
         /// <param name="type">The target CLR type.</param>
         /// <param name="doc">The BSON document to deserialize.</param>
-        public virtual object ToObject(Type type, BsonDocument doc)
+        public virtual object? ToObject(Type type, BsonDocument doc)
         {
             if (doc == null) throw new ArgumentNullException(nameof(doc));
 
@@ -29,19 +29,19 @@ namespace UltraLiteDB
         /// </summary>
         public virtual T ToObject<T>(BsonDocument doc)
         {
-            return (T)this.ToObject(typeof(T), doc);
+            return (T)this.ToObject(typeof(T), doc)!;
         }
 
         /// <summary>
         /// Deserializes a <see cref="BsonValue"/> into a .NET object of type <typeparamref name="T"/>.
         /// </summary>
-        internal T Deserialize<T>(BsonValue value)
+        internal T Deserialize<T>(BsonValue? value)
         {
-            if (value == null) return default(T);
+            if (value == null) return default(T)!;
 
             var result = this.Deserialize(typeof(T), value);
 
-            return (T)result;
+            return (T)result!;
         }
 
         #region Basic direct .NET convert types
@@ -76,9 +76,9 @@ namespace UltraLiteDB
 
         #endregion
 
-        internal object Deserialize(Type type, BsonValue value)
+        internal object? Deserialize(Type type, BsonValue value)
         {
-            Func<BsonValue, object> custom;
+            Func<BsonValue, object?> custom;
 
             // null value - null returns
             if (value.IsNull) return null;
@@ -139,15 +139,15 @@ namespace UltraLiteDB
                 // when array are from an object (like in Dictionary<string, object> { ["array"] = new string[] { "a", "b" } 
                 if (type == typeof(object))
                 {
-                    return this.DeserializeArray(typeof(object), value.AsArray);
+                    return this.DeserializeArray(typeof(object), value.AsArray!);
                 }
                 if (type.IsArray)
                 {
-                    return this.DeserializeArray(type.GetElementType(), value.AsArray);
+                    return this.DeserializeArray(type.GetElementType()!, value.AsArray!);
                 }
                 else
                 {
-                    return this.DeserializeList(type, value.AsArray);
+                    return this.DeserializeList(type, value.AsArray!);
                 }
             }
 
@@ -155,7 +155,7 @@ namespace UltraLiteDB
             else if (value.IsDocument)
             {
                 BsonValue typeField;
-                var doc = value.AsDocument;
+                var doc = value.AsDocument!;
 
                 // test if value is object and has _t
                 if (doc.RawValue.TryGetValue("_t", out typeField))
@@ -186,7 +186,7 @@ namespace UltraLiteDB
                     var k = type.GetTypeInfo().GetGenericArguments()[0];
                     var t = type.GetTypeInfo().GetGenericArguments()[1];
 
-                    this.DeserializeDictionary(k, t, (IDictionary)o, value.AsDocument);
+                    this.DeserializeDictionary(k, t, (IDictionary)o, value.AsDocument!);
                 }
                 else
                 {
@@ -257,6 +257,9 @@ namespace UltraLiteDB
 
             foreach (var member in entity.Members.Where(x => x.Setter != null))
             {
+                // members excluded from mapping have a null FieldName
+                if (member.FieldName == null) continue;
+
                 var val = value[member.FieldName];
 
                 if (!val.IsNull)
@@ -264,11 +267,11 @@ namespace UltraLiteDB
                     // check if has a custom deserialize function
                     if (member.Deserialize != null)
                     {
-                        member.Setter(obj, member.Deserialize(val, this));
+                        member.Setter!(obj, member.Deserialize(val, this));
                     }
                     else
                     {
-                        member.Setter(obj, this.Deserialize(member.DataType, val));
+                        member.Setter!(obj, this.Deserialize(member.DataType, val));
                     }
                 }
             }

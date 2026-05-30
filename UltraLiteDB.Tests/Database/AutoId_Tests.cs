@@ -10,31 +10,31 @@ namespace UltraLiteDB.Tests.Database
     public class EntityInt
     {
         public int Id { get; set; }
-        public string Name { get; set; }
+        public string? Name { get; set; }
     }
 
     public class EntityLong
     {
         public long Id { get; set; }
-        public string Name { get; set; }
+        public string? Name { get; set; }
     }
 
     public class EntityGuid
     {
         public Guid Id { get; set; }
-        public string Name { get; set; }
+        public string? Name { get; set; }
     }
 
     public class EntityOid
     {
-        public ObjectId Id { get; set; }
-        public string Name { get; set; }
+        public ObjectId? Id { get; set; }
+        public string? Name { get; set; }
     }
 
     public class EntityString
     {
-        public string Id { get; set; }
-        public string Name { get; set; }
+        public string? Id { get; set; }
+        public string? Name { get; set; }
     }
 
     #endregion
@@ -136,7 +136,7 @@ namespace UltraLiteDB.Tests.Database
                 Assert.AreEqual(cint_3.Name, cs_int.FindOne(Query.EQ("_id", cint_3.Id)).Name);
                 Assert.AreEqual(clong_3.Name, cs_long.FindOne(Query.EQ("_id", clong_3.Id)).Name);
                 Assert.AreEqual(cguid_3.Name, cs_guid.FindOne(Query.EQ("_id", cguid_3.Id)).Name);
-                Assert.AreEqual(coid_3.Name, cs_oid.FindOne(Query.EQ("_id", coid_3.Id)).Name);
+                Assert.AreEqual(coid_3.Name, cs_oid.FindOne(Query.EQ("_id", coid_3.Id!)).Name);
                 Assert.AreEqual(cstr_3.Name, cs_str.FindOne(Query.EQ("_id", cstr_3.Id)).Name);
 
                 // upsert (insert) document 4
@@ -156,7 +156,7 @@ namespace UltraLiteDB.Tests.Database
                 Assert.AreEqual(cint_4.Name, cs_int.FindOne(Query.EQ("_id", cint_4.Id)).Name);
                 Assert.AreEqual(clong_4.Name, cs_long.FindOne(Query.EQ("_id", clong_4.Id)).Name);
                 Assert.AreEqual(cguid_4.Name, cs_guid.FindOne(Query.EQ("_id", cguid_4.Id)).Name);
-                Assert.AreEqual(coid_4.Name, cs_oid.FindOne(Query.EQ("_id", coid_4.Id)).Name);
+                Assert.AreEqual(coid_4.Name, cs_oid.FindOne(Query.EQ("_id", coid_4.Id!)).Name);
                 Assert.AreEqual(cstr_4.Name, cs_str.FindOne(Query.EQ("_id", cstr_4.Id)).Name);
 
                 // count must be 4

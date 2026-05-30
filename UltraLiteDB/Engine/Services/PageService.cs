@@ -11,10 +11,10 @@ namespace UltraLiteDB
     {
         private CacheService _cache;
         private IDiskService _disk;
-        private AesEncryption _crypto;
+        private AesEncryption? _crypto;
         private Logger _log;
 
-        public PageService(IDiskService disk, AesEncryption crypto, CacheService cache, Logger log)
+        public PageService(IDiskService disk, AesEncryption? crypto, CacheService cache, Logger log)
         {
             _disk = disk;
             _crypto = crypto;
@@ -82,7 +82,7 @@ namespace UltraLiteDB
         /// Allocates a new page, either by reusing an <see cref="EmptyPage"/> from the free list or by extending the data file.
         /// Optionally links the new page to a previous page in a sequence.
         /// </summary>
-        public T NewPage<T>(BasePage prevPage = null)
+        public T NewPage<T>(BasePage? prevPage = null)
             where T : BasePage
         {
             // get header
@@ -227,7 +227,7 @@ namespace UltraLiteDB
         {
             var free = page.FreeBytes;
             var nextPageID = fieldPageID;
-            BasePage next = null;
+            BasePage? next = null;
 
             // let's page in desc order
             while (nextPageID != uint.MaxValue)

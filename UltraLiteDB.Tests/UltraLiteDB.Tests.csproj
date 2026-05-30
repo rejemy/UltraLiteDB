@@ -1,6 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <AssemblyName>UltraLiteDB.Tests</AssemblyName>
     <RootNamespace>UltraLiteDB.Tests</RootNamespace>

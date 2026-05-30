@@ -13,18 +13,18 @@ namespace UltraLiteDB.Tests.Mapper
         [BsonId]
         public int MyPK { get; set; }
         [BsonField("name")]
-        public string NameCustomer { get; set; }
+        public string? NameCustomer { get; set; }
         [BsonIgnore]
         public bool Ignore { get; set; }
-        public AttrAddress Address { get; set; }
-        public List<AttrAddress> Addresses { get; set; }
+        public AttrAddress? Address { get; set; }
+        public List<AttrAddress>? Addresses { get; set; }
     }
 
     public class AttrAddress
     {
         [BsonId]
         public int AddressPK { get; set; }
-        public string Street { get; set; }
+        public string? Street { get; set; }
     }
 
     #endregion
@@ -52,13 +52,13 @@ namespace UltraLiteDB.Tests.Mapper
 
             var j0 = JsonSerializer.Serialize(mapper.ToDocument(c0));
 
-            var c1 = mapper.ToObject<AttrCustomer>(JsonSerializer.Deserialize(j0).AsDocument);
+            var c1 = mapper.ToObject<AttrCustomer>(JsonSerializer.Deserialize(j0).AsDocument!);
 
             Assert.AreEqual(c0.MyPK, c1.MyPK);
             Assert.AreEqual(c0.NameCustomer, c1.NameCustomer);
             Assert.AreEqual(false, c1.Ignore);
-            Assert.AreEqual(c0.Address.AddressPK, c1.Address.AddressPK);
-            Assert.AreEqual(c0.Addresses[0].AddressPK, c1.Addresses[0].AddressPK);
+            Assert.AreEqual(c0.Address.AddressPK, c1.Address!.AddressPK);
+            Assert.AreEqual(c0.Addresses[0].AddressPK, c1.Addresses![0].AddressPK);
             Assert.AreEqual(c0.Addresses[1].AddressPK, c1.Addresses[1].AddressPK);
 
         }

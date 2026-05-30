@@ -7,12 +7,13 @@ namespace UltraLiteDB
 	/// </summary>
 	public class BsonFields
 	{
-		private string Field;
+		private string? Field;
 
 		/// <summary>
-		/// Creates a field extractor for the specified field name.
+		/// Creates a field extractor for the specified field name. A null field matches nothing
+		/// (used by degenerate queries such as <see cref="QueryEmpty"/>).
 		/// </summary>
-		public BsonFields(string field)
+		public BsonFields(string? field)
 		{
 			Field = field;
 		}
@@ -24,8 +25,8 @@ namespace UltraLiteDB
 		public IEnumerable<BsonValue> Execute(BsonDocument doc, bool includeNullIfEmpty = true)
 		{
 			var index = 0;
-			BsonValue value=null;
-			if(doc.TryGetValue(Field, out value))
+			BsonValue? value = null;
+			if(Field != null && doc.TryGetValue(Field, out value))
 			{
 				index++;
 				yield return value;

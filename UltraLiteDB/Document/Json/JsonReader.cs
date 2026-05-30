@@ -16,7 +16,7 @@ namespace UltraLiteDB
     {
         private readonly static IFormatProvider _numberFormat = CultureInfo.InvariantCulture.NumberFormat;
 
-        private Tokenizer _tokenizer = null;
+        private Tokenizer _tokenizer;
 
         /// <summary>
         /// Gets the current character position in the input stream.
@@ -116,7 +116,7 @@ namespace UltraLiteDB
                 case TokenType.Int: return new BsonValue(Convert.ToInt32(token.Value, _numberFormat));
                 case TokenType.Double: return new BsonValue(Convert.ToDouble(token.Value, _numberFormat));
                 case TokenType.Word:
-                    switch (token.Value.ToLower())
+                    switch (token.Value!.ToLower())
                     {
                         case "null": return BsonValue.Null;
                         case "true": return true;
@@ -138,7 +138,8 @@ namespace UltraLiteDB
             {
                 token.Expect(TokenType.String, TokenType.Word);
 
-                var key = token.Value;
+                // Expect(String, Word) guarantees a value-bearing token
+                var key = token.Value!;
 
                 token = _tokenizer.ReadToken(); // read ":"
 
@@ -191,9 +192,13 @@ namespace UltraLiteDB
             return arr;
         }
 
-        private BsonValue ReadExtendedDataType(string key, string value)
+        private BsonValue ReadExtendedDataType(string key, string? value)
         {
             BsonValue val;
+
+            // every extended data type expects a string value; if the value token had none
+            // (e.g. a nested object/array), this is not an extended type
+            if (value == null) return BsonValue.Null;
 
             switch (key)
             {

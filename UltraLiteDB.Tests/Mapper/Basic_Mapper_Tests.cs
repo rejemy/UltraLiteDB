@@ -48,7 +48,7 @@ namespace UltraLiteDB.Tests.Mapper
         public int MyId { get; set; }
 
         [BsonField("MY-STRING")]
-        public string MyString { get; set; }
+        public string? MyString { get; set; }
 
         public Guid MyGuid { get; set; }
         public DateTime MyDateTime { get; set; }
@@ -64,52 +64,52 @@ namespace UltraLiteDB.Tests.Mapper
 
         public decimal? MyDecimalNullable { get; set; }
 
-        public Uri MyUri { get; set; }
+        public Uri? MyUri { get; set; }
 
-        public byte[] MyByteArray { get; set; }
+        public byte[]? MyByteArray { get; set; }
         public ArraySegment<byte> MyArraySegment { get; set; }
 
         // do not serialize this properties
         [BsonIgnore]
-        public string MyIgnore { get; set; }
+        public string? MyIgnore { get; set; }
 
-        public string MyReadOnly { get { return "read only"; } }
-        public string MyWriteOnly { set; private get; }
+        public string? MyReadOnly { get { return "read only"; } }
+        public string? MyWriteOnly { set; private get; }
 
         // lists
-        public string[] MyStringArray { get; set; }
+        public string[]? MyStringArray { get; set; }
 
-        public List<string> MyStringList { get; set; }
-        public IEnumerable<string> MyStringEnumerable { get; set; }
-        public CustomStringEnumerable CustomStringEnumerable { get; set; }
-        public Dictionary<int, string> MyDict { get; set; }
-        public Dictionary<StringComparison, string> MyDictEnum { get; set; }
+        public List<string>? MyStringList { get; set; }
+        public IEnumerable<string>? MyStringEnumerable { get; set; }
+        public CustomStringEnumerable? CustomStringEnumerable { get; set; }
+        public Dictionary<int, string>? MyDict { get; set; }
+        public Dictionary<StringComparison, string>? MyDictEnum { get; set; }
 
         // list of structs
-        public ICollection<Point> MyCollectionPoint { get; set; }
-        public IList<Point> MyListPoint { get; set; }
-        public IEnumerable<Point> MyEnumerablePoint { get; set; }
+        public ICollection<Point>? MyCollectionPoint { get; set; }
+        public IList<Point>? MyListPoint { get; set; }
+        public IEnumerable<Point>? MyEnumerablePoint { get; set; }
 
         // interfaces
-        public IMyInterface MyInterface { get; set; }
+        public IMyInterface? MyInterface { get; set; }
 
-        public List<IMyInterface> MyListInterface { get; set; }
-        public IList<IMyInterface> MyIListInterface { get; set; }
+        public List<IMyInterface>? MyListInterface { get; set; }
+        public IList<IMyInterface>? MyIListInterface { get; set; }
 
         // objects
-        public object MyObjectString { get; set; }
+        public object? MyObjectString { get; set; }
 
-        public object MyObjectInt { get; set; }
-        public object MyObjectImpl { get; set; }
-        public List<object> MyObjectList { get; set; }
+        public object? MyObjectInt { get; set; }
+        public object? MyObjectImpl { get; set; }
+        public List<object>? MyObjectList { get; set; }
 
         // fields
-        public string MyField;
-        public byte[] MyBinaryField;
+        public string? MyField;
+        public byte[]? MyBinaryField;
         public ArraySegment<byte> MyArraySegmentField;
 
         // this is a indexer property - should not be serialized #795
-        public string this[string itemName]
+        public string? this[string itemName]
         {
             get
             {
@@ -125,18 +125,18 @@ namespace UltraLiteDB.Tests.Mapper
 
     public interface IMyInterface
     {
-        string Name { get; set; }
+        string? Name { get; set; }
     }
 
     public class MyImpl : IMyInterface
     {
-        public string Name { get; set; }
+        public string? Name { get; set; }
     }
 
     public class MyFluentEntity
     {
         public int MyPrimaryPk { get; set; }
-        public string CustomName { get; set; }
+        public string? CustomName { get; set; }
         public bool DoNotIncludeMe { get; set; }
         public DateTime MyDateIndexed { get; set; }
     }
@@ -144,9 +144,9 @@ namespace UltraLiteDB.Tests.Mapper
     public class BsonContainer
     {
         [BsonField("nbd")]
-        public BsonDocument NestedDoc { get; set; }
+        public BsonDocument? NestedDoc { get; set; }
         [BsonField("nbv")]
-        public BsonValue NestedDocAsValue { get; set; }
+        public BsonValue? NestedDocAsValue { get; set; }
     }
 
     #endregion
@@ -256,29 +256,29 @@ namespace UltraLiteDB.Tests.Mapper
             Assert.AreEqual(obj.MyArraySegment, nobj.MyArraySegment);
 
             // list
-            Assert.AreEqual(obj.MyStringArray[0], nobj.MyStringArray[0]);
+            Assert.AreEqual(obj.MyStringArray![0], nobj.MyStringArray![0]);
             Assert.AreEqual(obj.MyStringArray[1], nobj.MyStringArray[1]);
-            Assert.AreEqual(obj.MyStringEnumerable.First(), nobj.MyStringEnumerable.First());
-            Assert.AreEqual(obj.MyStringEnumerable.Take(1).First(), nobj.MyStringEnumerable.Take(1).First());
-            Assert.AreEqual(true, obj.CustomStringEnumerable.SequenceEqual(nobj.CustomStringEnumerable));
-            Assert.AreEqual(obj.MyDict[2], nobj.MyDict[2]);
-            Assert.AreEqual(obj.MyDictEnum[StringComparison.Ordinal], nobj.MyDictEnum[StringComparison.Ordinal]);
+            Assert.AreEqual(obj.MyStringEnumerable!.First(), nobj.MyStringEnumerable!.First());
+            Assert.AreEqual(obj.MyStringEnumerable!.Take(1).First(), nobj.MyStringEnumerable!.Take(1).First());
+            Assert.AreEqual(true, obj.CustomStringEnumerable!.SequenceEqual(nobj.CustomStringEnumerable!));
+            Assert.AreEqual(obj.MyDict![2], nobj.MyDict![2]);
+            Assert.AreEqual(obj.MyDictEnum![StringComparison.Ordinal], nobj.MyDictEnum![StringComparison.Ordinal]);
 
             // list of structs
-            Assert.AreEqual(obj.MyCollectionPoint.First(), nobj.MyCollectionPoint.First());
-            Assert.AreEqual(obj.MyListPoint.First(), nobj.MyListPoint.First());
-            Assert.AreEqual(obj.MyEnumerablePoint.First(), nobj.MyEnumerablePoint.First());
+            Assert.AreEqual(obj.MyCollectionPoint!.First(), nobj.MyCollectionPoint!.First());
+            Assert.AreEqual(obj.MyListPoint!.First(), nobj.MyListPoint!.First());
+            Assert.AreEqual(obj.MyEnumerablePoint!.First(), nobj.MyEnumerablePoint!.First());
 
             // interfaces
-            Assert.AreEqual(obj.MyInterface.Name, nobj.MyInterface.Name);
-            Assert.AreEqual(obj.MyListInterface[0].Name, nobj.MyListInterface[0].Name);
-            Assert.AreEqual(obj.MyIListInterface[0].Name, nobj.MyIListInterface[0].Name);
+            Assert.AreEqual(obj.MyInterface!.Name, nobj.MyInterface!.Name);
+            Assert.AreEqual(obj.MyListInterface![0].Name, nobj.MyListInterface![0].Name);
+            Assert.AreEqual(obj.MyIListInterface![0].Name, nobj.MyIListInterface![0].Name);
 
             // objects
             Assert.AreEqual(obj.MyObjectString, nobj.MyObjectString);
             Assert.AreEqual(obj.MyObjectInt, nobj.MyObjectInt);
-            Assert.AreEqual((obj.MyObjectImpl as MyImpl).Name, (nobj.MyObjectImpl as MyImpl).Name);
-            Assert.AreEqual(obj.MyObjectList[0], obj.MyObjectList[0]);
+            Assert.AreEqual((obj.MyObjectImpl as MyImpl)!.Name, (nobj.MyObjectImpl as MyImpl)!.Name);
+            Assert.AreEqual(obj.MyObjectList![0], obj.MyObjectList[0]);
             Assert.AreEqual(obj.MyObjectList[1], obj.MyObjectList[1]);
             Assert.AreEqual(obj.MyObjectList[3], obj.MyObjectList[3]);
         }

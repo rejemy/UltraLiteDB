@@ -25,15 +25,15 @@ namespace UltraLiteDB.Tests.Document
 
             doc["Items"] = new BsonArray();
 
-            doc["Items"].AsArray.Add(new BsonDocument());
-            doc["Items"].AsArray[0].AsDocument["Qtd"] = 3;
-            doc["Items"].AsArray[0].AsDocument["Description"] = "Big beer package";
-            doc["Items"].AsArray[0].AsDocument["Unit"] = (double)10 / (double)3;
+            doc["Items"].AsArray!.Add(new BsonDocument());
+            doc["Items"].AsArray![0].AsDocument!["Qtd"] = 3;
+            doc["Items"].AsArray![0].AsDocument!["Description"] = "Big beer package";
+            doc["Items"].AsArray![0].AsDocument!["Unit"] = (double)10 / (double)3;
 
-            doc["Items"].AsArray.Add("string-one");
-            doc["Items"].AsArray.Add(null);
-            doc["Items"].AsArray.Add(true);
-            doc["Items"].AsArray.Add(DateTime.UtcNow);
+            doc["Items"].AsArray!.Add("string-one");
+            doc["Items"].AsArray!.Add(null);
+            doc["Items"].AsArray!.Add(true);
+            doc["Items"].AsArray!.Add(DateTime.UtcNow);
 
             return doc;
         }
@@ -60,9 +60,9 @@ namespace UltraLiteDB.Tests.Document
             Assert.AreEqual(DateTime.MaxValue, doc["maxDate"].AsDateTime);
             Assert.AreEqual(DateTime.MinValue, doc["minDate"].AsDateTime);
 
-            Assert.AreEqual(o["Items"].AsArray.Count, doc["Items"].AsArray.Count);
-            Assert.AreEqual(o["Items"].AsArray[0].AsDocument["Unit"].AsDouble, doc["Items"].AsArray[0].AsDocument["Unit"].AsDouble);
-            Assert.AreEqual(o["Items"].AsArray[4].AsDateTime.ToString(), doc["Items"].AsArray[4].AsDateTime.ToString());
+            Assert.AreEqual(o["Items"].AsArray!.Count, doc["Items"].AsArray!.Count);
+            Assert.AreEqual(o["Items"].AsArray![0].AsDocument!["Unit"].AsDouble, doc["Items"].AsArray![0].AsDocument!["Unit"].AsDouble);
+            Assert.AreEqual(o["Items"].AsArray![4].AsDateTime.ToString(), doc["Items"].AsArray![4].AsDateTime.ToString());
         }
 
         [TestMethod]

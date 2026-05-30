@@ -13,7 +13,7 @@ namespace UltraLiteDB
         private int _skip;
         private int _limit;
         private Query _query;
-        private IEnumerator<IndexNode> _nodes;
+        private IEnumerator<IndexNode> _nodes = null!;
 
         public List<BsonDocument> Documents { get; private set; }
         public bool HasMore { get; private set; }
@@ -24,7 +24,7 @@ namespace UltraLiteDB
             _skip = skip;
             _limit = limit;
             _position = skip;
-            _nodes = null;
+            _nodes = null!;
 
             this.HasMore = true;
             this.Documents = new List<BsonDocument>();
@@ -81,7 +81,7 @@ namespace UltraLiteDB
 
                 // read document from data block
                 var buffer = data.Read(node.DataBlock);
-                var doc = BsonReader.Deserialize(buffer).AsDocument;
+                var doc = BsonReader.Deserialize(buffer).AsDocument!;
 
                 // if need run in full scan, execute full scan and test return
                 if (_query.UseFilter)

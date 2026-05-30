@@ -11,10 +11,10 @@ namespace UltraLiteDB.Tests.Mapper
 
     public class CustomType
     {
-        public Regex Re1 { get; set; }
-        public Regex Re2 { get; set; }
+        public Regex? Re1 { get; set; }
+        public Regex? Re2 { get; set; }
 
-        public Uri Url { get; set; }
+        public Uri? Url { get; set; }
         public TimeSpan Ts { get; set; }
     }
 
@@ -40,10 +40,10 @@ namespace UltraLiteDB.Tests.Mapper
             var no = mapper.ToObject<CustomType>(doc);
 
             Assert.AreEqual("^a+", doc["Re1"].AsString);
-            Assert.AreEqual("^a*", doc["Re2"].AsDocument["p"].AsString);
+            Assert.AreEqual("^a*", doc["Re2"].AsDocument!["p"].AsString);
 
-            Assert.AreEqual(o.Re1.ToString(), no.Re1.ToString());
-            Assert.AreEqual(o.Re2.ToString(), no.Re2.ToString());
+            Assert.AreEqual(o.Re1.ToString(), no.Re1!.ToString());
+            Assert.AreEqual(o.Re2.ToString(), no.Re2!.ToString());
             Assert.AreEqual(o.Re2.Options, no.Re2.Options);
             Assert.AreEqual(o.Url, no.Url);
             Assert.AreEqual(o.Ts, no.Ts);
