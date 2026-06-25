@@ -100,10 +100,6 @@ void DatabaseTest()
 }
 ```
 
-## To be done
-
-The BsonDocument class generates garbage every time you load or save to the database. I'm investigating allowing custom allocators and object reuse pools to reduce garbage generation from load and save operations. I don't think this library can be made 100% garbage free, but there is currently much room for improvement.
-
 ## Building
 
 To build UltraLiteDB yourself:

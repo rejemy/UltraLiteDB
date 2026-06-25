@@ -12,7 +12,7 @@ namespace UltraLiteDB
         /// <summary>The field name this query operates on.</summary>
         public string? Field { get; private set; }
 
-        /// <summary>Parsed field expression used for evaluating document values during full scan.</summary>
+        /// <summary>Single top-level field extractor used to read the document value during full scan.</summary>
         internal BsonFields Expression { get; set; } = null!;
         /// <summary>True if this query will use an index for execution.</summary>
         internal virtual bool UseIndex { get; set; }
@@ -275,7 +275,7 @@ namespace UltraLiteDB
             {
                 this.UseFilter = true;
 
-                // create expression based on Field
+                // create field extractor based on Field
                 this.Expression = new BsonFields(this.Field);
 
                 // returns all index nodes - (will use Filter method later)

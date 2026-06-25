@@ -66,7 +66,7 @@ namespace UltraLiteDB
             // If already a BsonDocument, use existing path
             if (entity is BsonDocument doc)
             {
-                BsonWriter.Serialize(doc);
+                BsonWriter.WriteDocument(writer, doc);
                 return;
             }
 

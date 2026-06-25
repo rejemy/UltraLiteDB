@@ -74,12 +74,12 @@ namespace UltraLiteDB
         public bool SerializeNullValues { get; set; }
 
         /// <summary>
-        /// When <c>true</c>, applies <see cref="string.Trim()"/> to string values during serialization. Default is <c>true</c>.
+        /// When <c>true</c>, applies <see cref="string.Trim()"/> to string values during serialization. Default is <c>false</c>.
         /// </summary>
         public bool TrimWhitespace { get; set; }
 
         /// <summary>
-        /// When <c>true</c>, empty strings are converted to <see cref="BsonValue.Null"/> during serialization. Default is <c>true</c>.
+        /// When <c>true</c>, empty strings are converted to <see cref="BsonValue.Null"/> during serialization. Default is <c>false</c>.
         /// </summary>
         public bool EmptyStringToNull { get; set; }
 
@@ -125,8 +125,8 @@ namespace UltraLiteDB
         public BsonMapper(Func<Type, object>? customTypeInstantiator = null)
         {
             this.SerializeNullValues = false;
-            this.TrimWhitespace = true;
-            this.EmptyStringToNull = true;
+            this.TrimWhitespace = false;
+            this.EmptyStringToNull = false;
             this.ResolveFieldName = (s) => s;
             this.ResolveMember = (t, mi, mm) => { };
             this.ResolveCollectionName = (t) => Reflection.IsList(t) ? Reflection.GetListItemType(t).Name : t.Name;

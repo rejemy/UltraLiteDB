@@ -11,7 +11,7 @@ namespace UltraLiteDB
         /// Reads all existing documents to populate the new index. Maximum 16 indexes per collection.
         /// </summary>
         /// <param name="collection">The collection name.</param>
-        /// <param name="field">The field expression to index (supports dot notation).</param>
+        /// <param name="field">The top-level document field name to index.</param>
         /// <param name="unique">If true, enforces unique values for this index.</param>
         public bool EnsureIndex(string collection, string field, bool unique = false)
         {

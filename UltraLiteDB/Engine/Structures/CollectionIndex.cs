@@ -8,7 +8,7 @@ namespace UltraLiteDB
 	/// </summary>
 	internal class CollectionIndex
     {
-        /// <summary>Regex pattern for valid index field names (supports dot notation, up to 60 segments).</summary>
+        /// <summary>Regex pattern for valid index field name characters (up to 60 characters).</summary>
         public static Regex IndexPattern = new Regex(@"^[\w](\.?[\w\$][\w-]*){0,59}$", RegexOptions.Compiled);
 
         /// <summary>
@@ -22,7 +22,7 @@ namespace UltraLiteDB
         public int Slot { get; set; }
 
         /// <summary>
-        /// The indexed field name (supports dot notation for nested fields).
+        /// The indexed field name (a top-level document field).
         /// </summary>
         public string Field { get; set; } = null!;
 
