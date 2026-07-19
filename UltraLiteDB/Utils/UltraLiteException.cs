@@ -34,6 +34,7 @@ namespace UltraLiteDB
 		public const int INVALID_DATA_TYPE = 204;
 		public const int PROPERTY_NOT_MAPPED = 206;
 		public const int INVALID_TYPED_NAME = 207;
+		public const int DESERIALIZE_MEMBER = 208;
 
 
 
@@ -227,6 +228,11 @@ namespace UltraLiteDB
 		internal static UltraLiteException InvalidTypedId(BsonValue typeId)
 		{
 			return new UltraLiteException(INVALID_TYPED_NAME, "Type '{0}' not found in custom type registry.", typeId);
+		}
+
+		internal static UltraLiteException DeserializeMember(string member, Type entityType, Exception inner)
+		{
+			return new UltraLiteException(DESERIALIZE_MEMBER, inner, "error deserializing member '{0}' of {1}: {2}", member, entityType.Name, inner.Message);
 		}
 
 		#endregion

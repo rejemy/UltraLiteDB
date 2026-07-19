@@ -264,14 +264,24 @@ namespace UltraLiteDB
 
 				if (!val.IsNull)
 				{
-					// check if has a custom deserialize function
-					if (member.Deserialize != null)
+					try
 					{
-						member.Setter!(obj, member.Deserialize(val, this));
+						// check if has a custom deserialize function
+						if (member.Deserialize != null)
+						{
+							member.Setter!(obj, member.Deserialize(val, this));
+						}
+						else
+						{
+							member.Setter!(obj, this.Deserialize(member.DataType, val));
+						}
 					}
-					else
+					catch (Exception ex) when (!(ex is UltraLiteException))
 					{
-						member.Setter!(obj, this.Deserialize(member.DataType, val));
+						// wrap raw conversion failures (InvalidCastException, FormatException, ...)
+						// with member + entity context; leave UltraLiteExceptions (which already
+						// carry context, including nested member paths) untouched
+						throw UltraLiteException.DeserializeMember(member.MemberName, type, ex);
 					}
 				}
 			}

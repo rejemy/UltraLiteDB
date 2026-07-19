@@ -69,12 +69,17 @@ namespace UltraLiteDB
 
 							if (typeDef == typeof(IList<>) ||
 								typeDef == typeof(ICollection<>) ||
-								typeDef == typeof(IEnumerable<>))
+								typeDef == typeof(IEnumerable<>) ||
+								typeDef == typeof(IReadOnlyList<>) ||
+								typeDef == typeof(IReadOnlyCollection<>))
 							{
+								// List<T> implements all of the above read-only interfaces
 								return CreateInstance(GetGenericListOfType(UnderlyingTypeOf(type)));
 							}
-							else if (typeDef == typeof(IDictionary<,>))
+							else if (typeDef == typeof(IDictionary<,>) ||
+								typeDef == typeof(IReadOnlyDictionary<,>))
 							{
+								// Dictionary<K,V> implements IReadOnlyDictionary<K,V> too
 								var k = type.GetTypeInfo().GetGenericArguments()[0];
 								var v = type.GetTypeInfo().GetGenericArguments()[1];
 
