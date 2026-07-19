@@ -40,7 +40,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Writes a BSON document (length prefix + elements + 0x00 terminator) to the writer.
 		/// </summary>
-		public static void WriteDocument(ByteWriter writer, BsonDocument doc)
+		public static void WriteDocument(IByteWriter writer, BsonDocument doc)
 		{
 			writer.Write(doc.GetBytesCount(false));
 
@@ -55,7 +55,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Writes a BSON array (length prefix + indexed elements + 0x00 terminator) to the writer.
 		/// </summary>
-		public static void WriteArray(ByteWriter writer, BsonArray array)
+		public static void WriteArray(IByteWriter writer, BsonArray array)
 		{
 			writer.Write(array.GetBytesCount(false));
 
@@ -67,7 +67,7 @@ namespace UltraLiteDB
 			writer.Write((byte)0x00);
 		}
 
-		private static void WriteElement(ByteWriter writer, string key, BsonValue value)
+		private static void WriteElement(IByteWriter writer, string key, BsonValue value)
 		{
 			// cast RawValue to avoid one if on As<Type>
 			switch (value.Type)
@@ -171,7 +171,7 @@ namespace UltraLiteDB
 			}
 		}
 
-		private static void WriteString(ByteWriter writer, string s)
+		private static void WriteString(IByteWriter writer, string s)
 		{
 			var bytes = Encoding.UTF8.GetBytes(s);
 			writer.Write(bytes.Length + 1);
@@ -179,7 +179,7 @@ namespace UltraLiteDB
 			writer.Write((byte)0x00);
 		}
 
-		private static void WriteCString(ByteWriter writer, string s)
+		private static void WriteCString(IByteWriter writer, string s)
 		{
 			var bytes = Encoding.UTF8.GetBytes(s);
 			writer.Write(bytes);

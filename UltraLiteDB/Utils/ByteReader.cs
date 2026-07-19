@@ -7,7 +7,7 @@ namespace UltraLiteDB
 	/// <summary>
 	/// Reads primitive and extended data types sequentially from a byte buffer in little-endian format.
 	/// </summary>
-	public class ByteReader
+	public class ByteReader : IByteReader
 	{
 		private byte[] _buffer;
 		private int _length;

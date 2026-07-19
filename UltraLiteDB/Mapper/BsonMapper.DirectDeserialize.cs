@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace UltraLiteDB
 {
@@ -58,6 +59,39 @@ namespace UltraLiteDB
 		public virtual object DeserializeFromBytes(Type type, ArraySegment<byte> bsonBytes)
 		{
 			return DeserializeFromBytes(type, bsonBytes.Array, bsonBytes.Offset);
+		}
+
+		/// <summary>
+		/// Deserializes BSON from a standard .NET <see cref="Stream"/> directly to a
+		/// <typeparamref name="T"/> instance, bypassing intermediate <see cref="BsonDocument"/> creation.
+		/// Reads forward-only, so any readable stream is supported.
+		/// </summary>
+		/// <typeparam name="T">The target entity type.</typeparam>
+		/// <param name="stream">The stream to read BSON from.</param>
+		public virtual T DeserializeFromStream<T>(Stream stream)
+		{
+			return (T)this.DeserializeFromStream(typeof(T), stream);
+		}
+
+		/// <summary>
+		/// Deserializes BSON from a standard .NET <see cref="Stream"/> directly to an entity of the
+		/// specified type. Falls back to <see cref="BsonReader"/> if the target type is <see cref="BsonDocument"/>.
+		/// </summary>
+		/// <param name="type">The target CLR type.</param>
+		/// <param name="stream">The stream to read BSON from.</param>
+		public virtual object DeserializeFromStream(Type type, Stream stream)
+		{
+			if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+			var reader = new StreamByteReader(stream);
+
+			// If target is BsonDocument, use existing path
+			if (type == typeof(BsonDocument))
+			{
+				return BsonReader.ReadDocument(reader);
+			}
+
+			return DirectBsonReader.ReadObjectDirect(reader, this, type);
 		}
 	}
 

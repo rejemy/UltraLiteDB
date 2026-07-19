@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace UltraLiteDB
 {
@@ -64,6 +65,44 @@ namespace UltraLiteDB
 			if (entity == null) throw new ArgumentNullException(nameof(entity));
 
 			// If already a BsonDocument, use existing path
+			if (entity is BsonDocument doc)
+			{
+				BsonWriter.WriteDocument(writer, doc);
+				return;
+			}
+
+			DirectBsonWriter.WriteObjectDirect(writer, this, type, entity, 0);
+		}
+
+		/// <summary>
+		/// Serializes an entity directly to BSON on a standard .NET <see cref="Stream"/>, bypassing
+		/// intermediate <see cref="BsonDocument"/> creation.
+		/// </summary>
+		/// <typeparam name="T">The entity type.</typeparam>
+		/// <param name="entity">The object to serialize.</param>
+		/// <param name="stream">The stream to write BSON bytes to. Must be seekable (unless the entity
+		/// is already a <see cref="BsonDocument"/>), because document/array length prefixes are backfilled.</param>
+		public virtual void SerializeToStream<T>(T entity, Stream stream)
+		{
+			this.SerializeToStream(typeof(T), entity, stream);
+		}
+
+		/// <summary>
+		/// Serializes an entity directly to BSON on a standard .NET <see cref="Stream"/>. Falls back to
+		/// <see cref="BsonWriter"/> if the entity is already a <see cref="BsonDocument"/>.
+		/// </summary>
+		/// <param name="type">The declared type (used for polymorphic type resolution).</param>
+		/// <param name="entity">The object to serialize.</param>
+		/// <param name="stream">The stream to write BSON bytes to. Must be seekable (unless the entity
+		/// is already a <see cref="BsonDocument"/>), because document/array length prefixes are backfilled.</param>
+		public virtual void SerializeToStream(Type type, object? entity, Stream stream)
+		{
+			if (entity == null) throw new ArgumentNullException(nameof(entity));
+			if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+			var writer = new StreamByteWriter(stream);
+
+			// If already a BsonDocument, use the forward-only document writer (works on any stream)
 			if (entity is BsonDocument doc)
 			{
 				BsonWriter.WriteDocument(writer, doc);

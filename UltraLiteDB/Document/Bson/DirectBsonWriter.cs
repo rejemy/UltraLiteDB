@@ -17,7 +17,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Write a C# object as a BSON document directly to the ByteWriter
 		/// </summary>
-		public static void WriteObjectDirect(ByteWriter writer, BsonMapper mapper, Type declaredType, object obj, int depth)
+		public static void WriteObjectDirect(IByteWriter writer, BsonMapper mapper, Type declaredType, object obj, int depth)
 		{
 			if (++depth > MAX_DEPTH) throw UltraLiteException.DocumentMaxDepth(MAX_DEPTH, declaredType);
 
@@ -84,7 +84,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Write a single value as a BSON element (type byte + CString key + value bytes)
 		/// </summary>
-		public static void WriteElementDirect(ByteWriter writer, BsonMapper mapper, string key, Type declaredType, object? value, int depth)
+		public static void WriteElementDirect(IByteWriter writer, BsonMapper mapper, string key, Type declaredType, object? value, int depth)
 		{
 			if (value == null)
 			{
@@ -284,7 +284,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Write an IEnumerable as a BSON array directly
 		/// </summary>
-		public static void WriteArrayDirect(ByteWriter writer, BsonMapper mapper, Type itemType, IEnumerable items, int depth)
+		public static void WriteArrayDirect(IByteWriter writer, BsonMapper mapper, Type itemType, IEnumerable items, int depth)
 		{
 			if (++depth > MAX_DEPTH) throw UltraLiteException.DocumentMaxDepth(MAX_DEPTH, itemType);
 
@@ -312,7 +312,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Write an IDictionary as a BSON document directly
 		/// </summary>
-		public static void WriteDictionaryDirect(ByteWriter writer, BsonMapper mapper, Type valueType, IDictionary dict, int depth)
+		public static void WriteDictionaryDirect(IByteWriter writer, BsonMapper mapper, Type valueType, IDictionary dict, int depth)
 		{
 			if (++depth > MAX_DEPTH) throw UltraLiteException.DocumentMaxDepth(MAX_DEPTH, valueType);
 
@@ -340,7 +340,7 @@ namespace UltraLiteDB
 		/// Write a BsonValue as an element using the existing BsonWriter format.
 		/// Used as fallback for custom serializers and BsonValue-typed properties.
 		/// </summary>
-		private static void WriteElementFromBsonValue(ByteWriter writer, string key, BsonValue value)
+		private static void WriteElementFromBsonValue(IByteWriter writer, string key, BsonValue value)
 		{
 			switch (value.Type)
 			{
@@ -460,7 +460,7 @@ namespace UltraLiteDB
 			}
 		}
 
-		private static void WriteString(ByteWriter writer, string s)
+		private static void WriteString(IByteWriter writer, string s)
 		{
 			var bytes = Encoding.UTF8.GetBytes(s);
 			writer.Write(bytes.Length + 1);
@@ -468,7 +468,7 @@ namespace UltraLiteDB
 			writer.Write((byte)0x00);
 		}
 
-		private static void WriteCString(ByteWriter writer, string s)
+		private static void WriteCString(IByteWriter writer, string s)
 		{
 			var bytes = Encoding.UTF8.GetBytes(s);
 			writer.Write(bytes);

@@ -7,7 +7,7 @@ namespace UltraLiteDB
 	/// <summary>
 	/// Writes primitive and extended data types sequentially into a byte buffer in little-endian format.
 	/// </summary>
-	public class ByteWriter
+	public class ByteWriter : IByteWriter
 	{
 		private byte[] _buffer;
 		private int _pos;

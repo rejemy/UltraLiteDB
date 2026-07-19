@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 
 namespace UltraLiteDB
 {
@@ -30,6 +31,20 @@ namespace UltraLiteDB
 		}
 
 		/// <summary>
+		/// Serializes a <see cref="BsonDocument"/> to a standard .NET <see cref="Stream"/> in BSON format.
+		/// Writes forward-only, so any writable stream is supported (seekable or not).
+		/// </summary>
+		/// <param name="doc">The document to serialize.</param>
+		/// <param name="stream">The stream to write the BSON data to.</param>
+		public static void Serialize(BsonDocument doc, Stream stream)
+		{
+			if (doc == null) throw new ArgumentNullException(nameof(doc));
+			if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+			BsonWriter.WriteDocument(new StreamByteWriter(stream), doc);
+		}
+
+		/// <summary>
 		/// Deserializes a <see cref="BsonDocument"/> from a BSON byte array.
 		/// </summary>
 		/// <param name="buffer">The BSON-encoded byte array.</param>
@@ -49,6 +64,18 @@ namespace UltraLiteDB
 			if (buffer == null || buffer.Count == 0) throw new ArgumentNullException(nameof(buffer));
 
 			return BsonReader.Deserialize(buffer);
+		}
+
+		/// <summary>
+		/// Deserializes a <see cref="BsonDocument"/> from a standard .NET <see cref="Stream"/>.
+		/// Reads forward-only, so any readable stream is supported (seekable or not).
+		/// </summary>
+		/// <param name="stream">The stream to read the BSON document from.</param>
+		public static BsonDocument Deserialize(Stream stream)
+		{
+			if (stream == null) throw new ArgumentNullException(nameof(stream));
+
+			return BsonReader.ReadDocument(new StreamByteReader(stream));
 		}
 	}
 }

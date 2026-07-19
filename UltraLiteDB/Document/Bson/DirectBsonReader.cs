@@ -15,7 +15,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Read a BSON document from bytes directly into a C# object
 		/// </summary>
-		public static object ReadObjectDirect(ByteReader reader, BsonMapper mapper, Type type)
+		public static object ReadObjectDirect(IByteReader reader, BsonMapper mapper, Type type)
 		{
 			var length = reader.ReadInt32();
 			var end = reader.Position + length - 5;
@@ -123,7 +123,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Helper to finish reading a dictionary when we discover mid-document that the target is IDictionary
 		/// </summary>
-		private static object ReadDictionaryFromPosition(ByteReader reader, BsonMapper mapper,
+		private static object ReadDictionaryFromPosition(IByteReader reader, BsonMapper mapper,
 			Type dictType, byte firstBsonType, string firstName, int end)
 		{
 			var keyType = dictType.GetTypeInfo().GetGenericArguments()[0];
@@ -153,7 +153,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Read a BSON value and convert directly to the target .NET type
 		/// </summary>
-		public static object? ReadValueDirect(ByteReader reader, BsonMapper mapper, byte bsonType, Type targetType)
+		public static object? ReadValueDirect(IByteReader reader, BsonMapper mapper, byte bsonType, Type targetType)
 		{
 			// Handle nullable types
 			if (Reflection.IsNullable(targetType))
@@ -274,7 +274,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Read a BSON array directly into an Array or IList
 		/// </summary>
-		public static object ReadArrayDirect(ByteReader reader, BsonMapper mapper, Type targetType)
+		public static object ReadArrayDirect(IByteReader reader, BsonMapper mapper, Type targetType)
 		{
 			var length = reader.ReadInt32();
 			var end = reader.Position + length - 5;
@@ -355,7 +355,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Read a BSON document directly into an IDictionary
 		/// </summary>
-		public static object ReadDictionaryDirect(ByteReader reader, BsonMapper mapper, Type dictType)
+		public static object ReadDictionaryDirect(IByteReader reader, BsonMapper mapper, Type dictType)
 		{
 			var length = reader.ReadInt32();
 			var end = reader.Position + length - 5;
@@ -382,7 +382,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Read a BSON element value as a BsonValue (fallback for custom serializers)
 		/// </summary>
-		private static BsonValue ReadBsonValue(ByteReader reader, byte bsonType)
+		private static BsonValue ReadBsonValue(IByteReader reader, byte bsonType)
 		{
 			switch (bsonType)
 			{
@@ -416,7 +416,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Skip past a BSON element's value bytes
 		/// </summary>
-		private static void SkipValue(ByteReader reader, byte bsonType)
+		private static void SkipValue(IByteReader reader, byte bsonType)
 		{
 			switch (bsonType)
 			{

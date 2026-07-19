@@ -32,7 +32,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Reads a complete BSON document (length prefix + elements + terminator) from the reader.
 		/// </summary>
-		public static BsonDocument ReadDocument(ByteReader reader)
+		public static BsonDocument ReadDocument(IByteReader reader)
 		{
 			var length = reader.ReadInt32();
 			var end = reader.Position + length - 5;
@@ -52,7 +52,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Reads a complete BSON array (length prefix + indexed elements + terminator) from the reader.
 		/// </summary>
-		public static BsonArray ReadArray(ByteReader reader)
+		public static BsonArray ReadArray(IByteReader reader)
 		{
 			var length = reader.ReadInt32();
 			var end = reader.Position + length - 5;
@@ -72,7 +72,7 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Reads a single BSON element (type byte + CString key + value) and outputs the field name.
 		/// </summary>
-		private static BsonValue ReadElement(ByteReader reader, out string name)
+		private static BsonValue ReadElement(IByteReader reader, out string name)
 		{
 			var type = reader.ReadByte();
 			name = reader.ReadCString();
