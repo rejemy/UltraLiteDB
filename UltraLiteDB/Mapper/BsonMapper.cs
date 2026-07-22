@@ -188,6 +188,17 @@ namespace UltraLiteDB
 			_customIdToType.Add(id, t);
 		}
 
+		/// <summary>
+		/// Returns type type registed by a compact type identifier, or null if the id
+		/// has not been registered
+		/// </summary>
+		/// <param name="id">A compact <see cref="BsonValue"/> identifier.</param>
+		/// <returns>The CLR type registered to the id, or null.</returns>
+		public Type? GetRegisteredTypeById(BsonValue id)
+		{
+			return _customIdToType.GetValueOrDefault(id);
+		}
+
 		#endregion
 
 		/// <summary>
