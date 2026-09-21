@@ -43,13 +43,15 @@ namespace UltraLiteDB
 				return BsonWriter.Serialize(doc);
 			}
 
-			var writer = new ByteWriter(256);
+			var writer = DirectBuffers.RentWriter();
 
-			DirectBsonWriter.WriteObjectDirect(writer, this, type, entity, 0);
+			DirectBsonWriter.WriteObjectDirect(writer, this, type, entity, null, 0);
 
-			// Trim buffer to actual size
+			// Copy out exactly the bytes written; the scratch buffer is reused by the next call
 			var result = new byte[writer.Position];
 			System.Buffer.BlockCopy(writer.Buffer, 0, result, 0, writer.Position);
+
+			DirectBuffers.ReturnWriter(writer);
 			return result;
 		}
 
@@ -67,11 +69,12 @@ namespace UltraLiteDB
 			// If already a BsonDocument, use existing path
 			if (entity is BsonDocument doc)
 			{
+				writer.EnsureCapacity(doc.GetBytesCount(true));
 				BsonWriter.WriteDocument(writer, doc);
 				return;
 			}
 
-			DirectBsonWriter.WriteObjectDirect(writer, this, type, entity, 0);
+			DirectBsonWriter.WriteObjectDirect(writer, this, type, entity, null, 0);
 		}
 
 		/// <summary>
@@ -80,8 +83,8 @@ namespace UltraLiteDB
 		/// </summary>
 		/// <typeparam name="T">The entity type.</typeparam>
 		/// <param name="entity">The object to serialize.</param>
-		/// <param name="stream">The stream to write BSON bytes to. Must be seekable (unless the entity
-		/// is already a <see cref="BsonDocument"/>), because document/array length prefixes are backfilled.</param>
+		/// <param name="stream">The stream to write BSON bytes to. Any writable stream is supported: the
+		/// document is built in a reusable buffer and written with a single <see cref="Stream.Write(byte[], int, int)"/>.</param>
 		public virtual void SerializeToStream<T>(T entity, Stream stream)
 		{
 			this.SerializeToStream(typeof(T), entity, stream);
@@ -93,23 +96,21 @@ namespace UltraLiteDB
 		/// </summary>
 		/// <param name="type">The declared type (used for polymorphic type resolution).</param>
 		/// <param name="entity">The object to serialize.</param>
-		/// <param name="stream">The stream to write BSON bytes to. Must be seekable (unless the entity
-		/// is already a <see cref="BsonDocument"/>), because document/array length prefixes are backfilled.</param>
+		/// <param name="stream">The stream to write BSON bytes to. Any writable stream is supported: the
+		/// document is built in a reusable buffer and written with a single <see cref="Stream.Write(byte[], int, int)"/>.</param>
 		public virtual void SerializeToStream(Type type, object? entity, Stream stream)
 		{
 			if (entity == null) throw new ArgumentNullException(nameof(entity));
 			if (stream == null) throw new ArgumentNullException(nameof(stream));
+			if (!stream.CanWrite) throw new ArgumentException("Stream must be writable.", nameof(stream));
 
-			var writer = new StreamByteWriter(stream);
+			var writer = DirectBuffers.RentWriter();
 
-			// If already a BsonDocument, use the forward-only document writer (works on any stream)
-			if (entity is BsonDocument doc)
-			{
-				BsonWriter.WriteDocument(writer, doc);
-				return;
-			}
+			this.SerializeToBytes(type, entity, writer);
 
-			DirectBsonWriter.WriteObjectDirect(writer, this, type, entity, 0);
+			stream.Write(writer.Buffer, 0, writer.Position);
+
+			DirectBuffers.ReturnWriter(writer);
 		}
 	}
 }

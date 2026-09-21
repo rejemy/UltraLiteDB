@@ -22,13 +22,55 @@ namespace UltraLiteDB
 		/// <summary>
 		/// The CLR type of this member (e.g. typeof(string), typeof(int)).
 		/// </summary>
-		public Type DataType { get; set; } = null!;
+		public Type DataType
+		{
+			get { return _dataType; }
+			set { _dataType = value; this.WriteInfo = null; this.ReadInfo = null; }
+		}
+
+		private Type _dataType = null!;
 
 		/// <summary>
 		/// The BSON document field name this member maps to (e.g. "first_name", "_id").
 		/// Set to null to exclude from mapping.
 		/// </summary>
-		public string? FieldName { get; set; }
+		public string? FieldName
+		{
+			get { return _fieldName; }
+			set { _fieldName = value; _fieldNameCString = null; }
+		}
+
+		private string? _fieldName;
+
+		private byte[]? _fieldNameCString;
+
+		/// <summary>
+		/// <see cref="FieldName"/> encoded as a null-terminated UTF-8 C-string, cached so the direct
+		/// serializer never re-encodes field names. Null when the member is excluded from mapping.
+		/// </summary>
+		internal byte[]? FieldNameCString
+		{
+			get
+			{
+				if (_fieldNameCString == null && _fieldName != null)
+				{
+					var bytes = new byte[System.Text.Encoding.UTF8.GetByteCount(_fieldName) + 1];
+					System.Text.Encoding.UTF8.GetBytes(_fieldName, 0, _fieldName.Length, bytes, 0);
+					System.Threading.Volatile.Write(ref _fieldNameCString, bytes);
+				}
+				return _fieldNameCString;
+			}
+		}
+
+		/// <summary>
+		/// Direct-serializer dispatch info cached for the last runtime type seen in this member.
+		/// </summary>
+		internal DirectWriteInfo? WriteInfo;
+
+		/// <summary>
+		/// Direct-deserializer conversion info cached for <see cref="DataType"/>.
+		/// </summary>
+		internal DirectReadInfo? ReadInfo;
 
 		/// <summary>
 		/// Delegate that reads this member's value from an entity instance.

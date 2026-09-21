@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Text;
+using System.Threading;
 
 namespace UltraLiteDB
 {
@@ -10,19 +11,29 @@ namespace UltraLiteDB
 	/// Serializes C# objects directly to BSON bytes, bypassing intermediate <see cref="BsonDocument"/> creation.
 	/// Reduces GC pressure for high-throughput serialization. Supports polymorphism via _t/_type discriminators.
 	/// </summary>
+	/// <remarks>
+	/// Hot-path notes: field names are written from bytes cached on <see cref="MemberMapper"/>, array index
+	/// keys and strings are encoded straight into the buffer, and per-value type dispatch is cached in
+	/// <see cref="DirectWriteInfo"/>. Each element's type byte is reserved up front and back-filled once
+	/// the value has been written, so key handling is independent of value dispatch.
+	/// </remarks>
 	internal static class DirectBsonWriter
 	{
 		private const int MAX_DEPTH = 20;
 
+		private static readonly byte[] _typeIdKey = { (byte)'_', (byte)'t', 0x00 };
+		private static readonly byte[] _typeNameKey = { (byte)'_', (byte)'t', (byte)'y', (byte)'p', (byte)'e', 0x00 };
+
 		/// <summary>
-		/// Write a C# object as a BSON document directly to the ByteWriter
+		/// Write a C# object as a BSON document directly to the ByteWriter. <c>entity</c> is the entity
+		/// mapper for <c>obj.GetType()</c> when the caller already has it, otherwise null.
 		/// </summary>
-		public static void WriteObjectDirect(IByteWriter writer, BsonMapper mapper, Type declaredType, object obj, int depth)
+		public static void WriteObjectDirect(ByteWriter writer, BsonMapper mapper, Type declaredType, object obj, EntityMapper? entity, int depth)
 		{
 			if (++depth > MAX_DEPTH) throw UltraLiteException.DocumentMaxDepth(MAX_DEPTH, declaredType);
 
 			var t = obj.GetType();
-			var entity = mapper.GetEntityMapper(t);
+			entity ??= mapper.GetEntityMapper(t);
 
 			// Record position for length backfill
 			var startPos = writer.Position;
@@ -34,39 +45,66 @@ namespace UltraLiteDB
 			{
 				if (mapper.CustomTypeToId.TryGetValue(t, out BsonValue customTypeId))
 				{
-					WriteElementFromBsonValue(writer, "_t", customTypeId);
+					var typePos = writer.BeginElement(_typeIdKey);
+					writer.SetByte(typePos, WriteBsonValue(writer, customTypeId));
 				}
 				else if (mapper.IncludeFullType)
 				{
-					var typeName = t.FullName + ", " + t.GetTypeInfo().Assembly.GetName().Name;
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount("_type") + 1 + 4 + Encoding.UTF8.GetByteCount(typeName) + 1);
-					writer.Write((byte)0x02);
-					WriteCString(writer, "_type");
-					WriteString(writer, typeName);
+					var payload = entity.TypeNamePayload;
+					if (payload == null)
+					{
+						var typeName = t.FullName + ", " + t.GetTypeInfo().Assembly.GetName().Name;
+						var scratch = new ByteWriter(64);
+						scratch.WriteBsonString(typeName);
+						payload = new byte[scratch.Position];
+						System.Buffer.BlockCopy(scratch.Buffer, 0, payload, 0, payload.Length);
+						Volatile.Write(ref entity.TypeNamePayload, payload);
+					}
+
+					var typePos = writer.BeginElement(_typeNameKey);
+					writer.SetByte(typePos, 0x02);
+					writer.WriteRaw(payload);
 				}
 			}
 
-			foreach (var member in entity.Members)
+			var members = entity.Members;
+
+			for (var i = 0; i < members.Count; i++)
 			{
-				if (member.Getter == null) continue;
+				var member = members[i];
+				var getter = member.Getter;
+				if (getter == null) continue;
 
 				// members excluded from mapping have a null FieldName
-				if (member.FieldName == null) continue;
+				var key = member.FieldNameCString;
+				if (key == null) continue;
 
-				var value = member.Getter(obj);
+				var value = getter(obj);
 
 				if (value == null && !mapper.SerializeNullValues && member.FieldName != "_id") continue;
+
+				var typePos = writer.BeginElement(key);
+				byte bsonType;
 
 				if (member.Serialize != null)
 				{
 					// Custom member serializer — falls back to BsonValue
-					var bsonValue = member.Serialize(value, mapper);
-					WriteElementFromBsonValue(writer, member.FieldName, bsonValue ?? BsonValue.Null);
+					bsonType = WriteBsonValue(writer, member.Serialize(value, mapper) ?? BsonValue.Null);
+				}
+				else if (value == null)
+				{
+					bsonType = 0x0A;
 				}
 				else
 				{
-					WriteElementDirect(writer, mapper, member.FieldName, member.DataType, value, depth);
+					var cached = member.WriteInfo;
+					var info = DirectWriteInfo.Get(mapper, cached, member.DataType, value.GetType());
+					if (info != cached) Volatile.Write(ref member.WriteInfo, info);
+
+					bsonType = WriteValue(writer, mapper, info, value, depth);
 				}
+
+				writer.SetByte(typePos, bsonType);
 			}
 
 			// Write terminator
@@ -74,405 +112,422 @@ namespace UltraLiteDB
 			writer.Write((byte)0x00);
 
 			// Backfill document length
-			var endPos = writer.Position;
-			var length = endPos - startPos;
-			writer.Position = startPos;
-			writer.Write((Int32)length);
-			writer.Position = endPos;
+			writer.SetInt32(startPos, writer.Position - startPos);
 		}
 
 		/// <summary>
-		/// Write a single value as a BSON element (type byte + CString key + value bytes)
+		/// Writes a non-null value's bytes (the element's type byte and key have already been handled)
+		/// and returns its BSON type byte.
 		/// </summary>
-		public static void WriteElementDirect(IByteWriter writer, BsonMapper mapper, string key, Type declaredType, object? value, int depth)
+		private static byte WriteValue(ByteWriter writer, BsonMapper mapper, DirectWriteInfo info, object value, int depth)
 		{
-			if (value == null)
+			switch (info.Kind)
 			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1);
-				writer.Write((byte)0x0A);
-				WriteCString(writer, key);
-				return;
-			}
+				case DirectKind.String:
+					var str = mapper.TrimWhitespace ? ((String)value).Trim() : (String)value;
+					if (mapper.EmptyStringToNull && str.Length == 0) return 0x0A;
+					writer.WriteBsonString(str);
+					return 0x02;
 
-			// Already a BsonValue — use existing writer
-			if (value is BsonValue bv)
-			{
-				WriteElementFromBsonValue(writer, key, bv);
-				return;
-			}
+				case DirectKind.Int32:
+					writer.EnsureCapacity(4);
+					writer.Write((Int32)value);
+					return 0x10;
 
-			if (value is String strVal)
-			{
-				var str = mapper.TrimWhitespace ? strVal.Trim() : strVal;
+				case DirectKind.Int64:
+					writer.EnsureCapacity(8);
+					writer.Write((Int64)value);
+					return 0x12;
 
-				if (mapper.EmptyStringToNull && str.Length == 0)
-				{
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1);
-					writer.Write((byte)0x0A);
-					WriteCString(writer, key);
-					return;
-				}
+				case DirectKind.Double:
+					writer.EnsureCapacity(8);
+					writer.Write((Double)value);
+					return 0x01;
 
-				var strBytes = Encoding.UTF8.GetBytes(str);
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 4 + strBytes.Length + 1);
-				writer.Write((byte)0x02);
-				WriteCString(writer, key);
-				writer.Write(strBytes.Length + 1);
-				writer.Write(strBytes);
-				writer.Write((byte)0x00);
-			}
-			else if (value is Int32 i32)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 4);
-				writer.Write((byte)0x10);
-				WriteCString(writer, key);
-				writer.Write(i32);
-			}
-			else if (value is Int64 i64)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 8);
-				writer.Write((byte)0x12);
-				WriteCString(writer, key);
-				writer.Write(i64);
-			}
-			else if (value is Double dbl)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 8);
-				writer.Write((byte)0x01);
-				WriteCString(writer, key);
-				writer.Write(dbl);
-			}
-			else if (value is Decimal dec)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 16);
-				writer.Write((byte)0x13);
-				WriteCString(writer, key);
-				writer.Write(dec);
-			}
-			else if (value is Byte[] byteArr)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 4 + 1 + byteArr.Length);
-				writer.Write((byte)0x05);
-				WriteCString(writer, key);
-				writer.Write(byteArr.Length);
-				writer.Write((byte)0x00); // Generic binary subtype
-				writer.Write(byteArr);
-			}
-			else if (value is ArraySegment<byte> segment)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 4 + 1 + segment.Count);
-				writer.Write((byte)0x05);
-				WriteCString(writer, key);
-				writer.Write(segment.Count);
-				writer.Write((byte)0x00);
-				if (segment.Count > 0)
-				{
-					writer.Write(segment);
-				}
-			}
-			else if (value is ObjectId oid)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 12);
-				writer.Write((byte)0x07);
-				WriteCString(writer, key);
-				writer.Write(oid.ToByteArray());
-			}
-			else if (value is Guid guid)
-			{
-				var guidBytes = guid.ToByteArray();
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 4 + 1 + guidBytes.Length);
-				writer.Write((byte)0x05);
-				WriteCString(writer, key);
-				writer.Write(guidBytes.Length);
-				writer.Write((byte)0x04); // UUID subtype
-				writer.Write(guidBytes);
-			}
-			else if (value is Boolean boolVal)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 1);
-				writer.Write((byte)0x08);
-				WriteCString(writer, key);
-				writer.Write((byte)(boolVal ? 0x01 : 0x00));
-			}
-			else if (value is DateTime dateVal)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 8);
-				writer.Write((byte)0x09);
-				WriteCString(writer, key);
-				var utc = (dateVal == DateTime.MinValue || dateVal == DateTime.MaxValue) ? dateVal : dateVal.ToUniversalTime();
-				var ts = utc - BsonValue.UnixEpoch;
-				writer.Write(Convert.ToInt64(ts.TotalMilliseconds));
-			}
-			// Converted types
-			else if (value is Int16 || value is UInt16 || value is Byte || value is SByte)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 4);
-				writer.Write((byte)0x10);
-				WriteCString(writer, key);
-				writer.Write(Convert.ToInt32(value));
-			}
-			else if (value is UInt32 u32)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 8);
-				writer.Write((byte)0x12);
-				WriteCString(writer, key);
-				writer.Write(Convert.ToInt64(u32));
-			}
-			else if (value is UInt64 u64)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 8);
-				writer.Write((byte)0x12);
-				WriteCString(writer, key);
-				writer.Write(unchecked((Int64)u64));
-			}
-			else if (value is Single sng)
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 8);
-				writer.Write((byte)0x01);
-				WriteCString(writer, key);
-				writer.Write(Convert.ToDouble(sng));
-			}
-			else if (value is Char || value is Enum)
-			{
-				var str = value.ToString();
-				var strBytes = Encoding.UTF8.GetBytes(str);
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 4 + strBytes.Length + 1);
-				writer.Write((byte)0x02);
-				WriteCString(writer, key);
-				writer.Write(strBytes.Length + 1);
-				writer.Write(strBytes);
-				writer.Write((byte)0x00);
-			}
-			// Custom serializers
-			else if (mapper.CustomSerializer.TryGetValue(declaredType, out var custom) ||
-					 mapper.CustomSerializer.TryGetValue(value.GetType(), out custom))
-			{
-				var bsonValue = custom(value);
-				WriteElementFromBsonValue(writer, key, bsonValue ?? BsonValue.Null);
-			}
-			// Dictionary
-			else if (value is IDictionary dict)
-			{
-				var valueType = declaredType == typeof(object) ? value.GetType() : declaredType;
-				var itemType = valueType.GetTypeInfo().GetGenericArguments()[1];
+				case DirectKind.Decimal:
+					writer.EnsureCapacity(16);
+					writer.Write((Decimal)value);
+					return 0x13;
 
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1);
-				writer.Write((byte)0x03);
-				WriteCString(writer, key);
-				WriteDictionaryDirect(writer, mapper, itemType, dict, depth);
-			}
-			// IEnumerable (arrays, lists)
-			else if (value is IEnumerable enumerable)
-			{
-				var itemType = Reflection.GetListItemType(value.GetType());
+				case DirectKind.Binary:
+					var byteArr = (Byte[])value;
+					writer.EnsureCapacity(4 + 1 + byteArr.Length);
+					writer.Write(byteArr.Length);
+					writer.Write((byte)0x00); // Generic binary subtype
+					writer.Write(byteArr);
+					return 0x05;
 
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1);
-				writer.Write((byte)0x04);
-				WriteCString(writer, key);
-				WriteArrayDirect(writer, mapper, itemType, enumerable, depth);
+				case DirectKind.ArraySegment:
+					var segment = (ArraySegment<byte>)value;
+					writer.EnsureCapacity(4 + 1 + segment.Count);
+					writer.Write(segment.Count);
+					writer.Write((byte)0x00);
+					if (segment.Count > 0) writer.Write(segment);
+					return 0x05;
+
+				case DirectKind.ObjectId:
+					writer.EnsureCapacity(12);
+					writer.Write((ObjectId)value);
+					return 0x07;
+
+				case DirectKind.Guid:
+					writer.EnsureCapacity(4 + 1 + 16);
+					writer.Write(16);
+					writer.Write((byte)0x04); // UUID subtype
+					writer.Write((Guid)value);
+					return 0x05;
+
+				case DirectKind.Boolean:
+					writer.EnsureCapacity(1);
+					writer.Write((byte)((Boolean)value ? 0x01 : 0x00));
+					return 0x08;
+
+				case DirectKind.DateTime:
+					writer.EnsureCapacity(8);
+					writer.Write(ToUnixMilliseconds((DateTime)value));
+					return 0x09;
+
+				// Converted types
+				case DirectKind.Int16:
+					writer.EnsureCapacity(4);
+					writer.Write((Int32)(Int16)value);
+					return 0x10;
+
+				case DirectKind.UInt16:
+					writer.EnsureCapacity(4);
+					writer.Write((Int32)(UInt16)value);
+					return 0x10;
+
+				case DirectKind.Byte:
+					writer.EnsureCapacity(4);
+					writer.Write((Int32)(Byte)value);
+					return 0x10;
+
+				case DirectKind.SByte:
+					writer.EnsureCapacity(4);
+					writer.Write((Int32)(SByte)value);
+					return 0x10;
+
+				case DirectKind.UInt32:
+					writer.EnsureCapacity(8);
+					writer.Write((Int64)(UInt32)value);
+					return 0x12;
+
+				case DirectKind.UInt64:
+					writer.EnsureCapacity(8);
+					writer.Write(unchecked((Int64)(UInt64)value));
+					return 0x12;
+
+				case DirectKind.Single:
+					writer.EnsureCapacity(8);
+					writer.Write((Double)(Single)value);
+					return 0x01;
+
+				case DirectKind.Char:
+					writer.WriteBsonString(value.ToString());
+					return 0x02;
+
+				case DirectKind.Enum:
+					writer.WriteRaw(info.Enum!.GetPayload(value));
+					return 0x02;
+
+				case DirectKind.BsonValue:
+					return WriteBsonValue(writer, (BsonValue)value);
+
+				case DirectKind.Custom:
+					return WriteBsonValue(writer, info.Custom!(value) ?? BsonValue.Null);
+
+				case DirectKind.Dictionary:
+					WriteDictionaryDirect(writer, mapper, info, (IDictionary)value, depth);
+					return 0x03;
+
+				case DirectKind.Enumerable:
+					WriteArrayDirect(writer, mapper, info, (IEnumerable)value, depth);
+					return 0x04;
+
+				default:
+					// Complex object
+					info.Entity ??= mapper.GetEntityMapper(info.RuntimeType);
+					WriteObjectDirect(writer, mapper, info.DeclaredType, value, info.Entity, depth);
+					return 0x03;
 			}
-			// Complex object
-			else
-			{
-				writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1);
-				writer.Write((byte)0x03);
-				WriteCString(writer, key);
-				WriteObjectDirect(writer, mapper, declaredType, value, depth);
-			}
+		}
+
+		/// <summary>
+		/// Writes a collection item or dictionary value, reusing the collection's cached item dispatch.
+		/// </summary>
+		private static byte WriteItem(ByteWriter writer, BsonMapper mapper, DirectWriteInfo collection, object? item, int depth)
+		{
+			if (item == null) return 0x0A;
+
+			var cached = collection.ItemInfo;
+			var info = DirectWriteInfo.Get(mapper, cached, collection.ItemType!, item.GetType());
+			if (info != cached) Volatile.Write(ref collection.ItemInfo, info);
+
+			return WriteValue(writer, mapper, info, item, depth);
 		}
 
 		/// <summary>
 		/// Write an IEnumerable as a BSON array directly
 		/// </summary>
-		public static void WriteArrayDirect(IByteWriter writer, BsonMapper mapper, Type itemType, IEnumerable items, int depth)
+		private static void WriteArrayDirect(ByteWriter writer, BsonMapper mapper, DirectWriteInfo info, IEnumerable items, int depth)
 		{
-			if (++depth > MAX_DEPTH) throw UltraLiteException.DocumentMaxDepth(MAX_DEPTH, itemType);
+			if (++depth > MAX_DEPTH) throw UltraLiteException.DocumentMaxDepth(MAX_DEPTH, info.ItemType!);
 
 			var startPos = writer.Position;
 			writer.EnsureCapacity(4);
 			writer.Skip(4); // reserve for length
 
-			var i = 0;
-			foreach (var item in items)
+			if (!TryWritePrimitiveArray(writer, items))
 			{
-				WriteElementDirect(writer, mapper, i.ToString(), itemType, item, depth);
-				i++;
+				if (items is IList list)
+				{
+					// indexed access avoids allocating an enumerator
+					for (var i = 0; i < list.Count; i++)
+					{
+						var typePos = writer.BeginElement(i);
+						writer.SetByte(typePos, WriteItem(writer, mapper, info, list[i], depth));
+					}
+				}
+				else
+				{
+					var i = 0;
+					foreach (var item in items)
+					{
+						var typePos = writer.BeginElement(i++);
+						writer.SetByte(typePos, WriteItem(writer, mapper, info, item, depth));
+					}
+				}
 			}
 
 			writer.EnsureCapacity(1);
 			writer.Write((byte)0x00);
 
-			var endPos = writer.Position;
-			var length = endPos - startPos;
-			writer.Position = startPos;
-			writer.Write((Int32)length);
-			writer.Position = endPos;
+			writer.SetInt32(startPos, writer.Position - startPos);
+		}
+
+		/// <summary>
+		/// Writes arrays/lists of common primitive element types without boxing each element.
+		/// Output is identical to the general path (same BSON types and conversions).
+		/// </summary>
+		private static bool TryWritePrimitiveArray(ByteWriter writer, IEnumerable items)
+		{
+			var type = items.GetType();
+
+			if (type == typeof(int[]))
+			{
+				var a = (int[])items;
+				for (var i = 0; i < a.Length; i++) WriteInt32Item(writer, i, a[i]);
+			}
+			else if (type == typeof(List<int>))
+			{
+				var l = (List<int>)items;
+				for (var i = 0; i < l.Count; i++) WriteInt32Item(writer, i, l[i]);
+			}
+			else if (type == typeof(float[]))
+			{
+				var a = (float[])items;
+				for (var i = 0; i < a.Length; i++) WriteDoubleItem(writer, i, a[i]);
+			}
+			else if (type == typeof(List<float>))
+			{
+				var l = (List<float>)items;
+				for (var i = 0; i < l.Count; i++) WriteDoubleItem(writer, i, l[i]);
+			}
+			else if (type == typeof(double[]))
+			{
+				var a = (double[])items;
+				for (var i = 0; i < a.Length; i++) WriteDoubleItem(writer, i, a[i]);
+			}
+			else if (type == typeof(List<double>))
+			{
+				var l = (List<double>)items;
+				for (var i = 0; i < l.Count; i++) WriteDoubleItem(writer, i, l[i]);
+			}
+			else if (type == typeof(long[]))
+			{
+				var a = (long[])items;
+				for (var i = 0; i < a.Length; i++) WriteInt64Item(writer, i, a[i]);
+			}
+			else if (type == typeof(List<long>))
+			{
+				var l = (List<long>)items;
+				for (var i = 0; i < l.Count; i++) WriteInt64Item(writer, i, l[i]);
+			}
+			else if (type == typeof(bool[]))
+			{
+				var a = (bool[])items;
+				for (var i = 0; i < a.Length; i++) WriteBooleanItem(writer, i, a[i]);
+			}
+			else if (type == typeof(List<bool>))
+			{
+				var l = (List<bool>)items;
+				for (var i = 0; i < l.Count; i++) WriteBooleanItem(writer, i, l[i]);
+			}
+			else
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		private static void WriteInt32Item(ByteWriter writer, int index, int value)
+		{
+			writer.SetByte(writer.BeginElement(index), 0x10);
+			writer.EnsureCapacity(4);
+			writer.Write(value);
+		}
+
+		private static void WriteInt64Item(ByteWriter writer, int index, long value)
+		{
+			writer.SetByte(writer.BeginElement(index), 0x12);
+			writer.EnsureCapacity(8);
+			writer.Write(value);
+		}
+
+		private static void WriteDoubleItem(ByteWriter writer, int index, double value)
+		{
+			writer.SetByte(writer.BeginElement(index), 0x01);
+			writer.EnsureCapacity(8);
+			writer.Write(value);
+		}
+
+		private static void WriteBooleanItem(ByteWriter writer, int index, bool value)
+		{
+			writer.SetByte(writer.BeginElement(index), 0x08);
+			writer.EnsureCapacity(1);
+			writer.Write((byte)(value ? 0x01 : 0x00));
 		}
 
 		/// <summary>
 		/// Write an IDictionary as a BSON document directly
 		/// </summary>
-		public static void WriteDictionaryDirect(IByteWriter writer, BsonMapper mapper, Type valueType, IDictionary dict, int depth)
+		private static void WriteDictionaryDirect(ByteWriter writer, BsonMapper mapper, DirectWriteInfo info, IDictionary dict, int depth)
 		{
-			if (++depth > MAX_DEPTH) throw UltraLiteException.DocumentMaxDepth(MAX_DEPTH, valueType);
+			if (++depth > MAX_DEPTH) throw UltraLiteException.DocumentMaxDepth(MAX_DEPTH, info.ItemType!);
 
 			var startPos = writer.Position;
 			writer.EnsureCapacity(4);
 			writer.Skip(4); // reserve for length
 
-			foreach (var key in dict.Keys)
+			// enumerate entries directly instead of Keys + indexer (one hash lookup per key saved)
+			var e = dict.GetEnumerator();
+			try
 			{
-				var val = dict[key];
-				WriteElementDirect(writer, mapper, key.ToString(), valueType, val, depth);
+				while (e.MoveNext())
+				{
+					var typePos = writer.BeginElement(e.Key.ToString());
+					writer.SetByte(typePos, WriteItem(writer, mapper, info, e.Value, depth));
+				}
+			}
+			finally
+			{
+				(e as IDisposable)?.Dispose();
 			}
 
 			writer.EnsureCapacity(1);
 			writer.Write((byte)0x00);
 
-			var endPos = writer.Position;
-			var length = endPos - startPos;
-			writer.Position = startPos;
-			writer.Write((Int32)length);
-			writer.Position = endPos;
+			writer.SetInt32(startPos, writer.Position - startPos);
 		}
 
 		/// <summary>
-		/// Write a BsonValue as an element using the existing BsonWriter format.
+		/// Converts a DateTime to BSON UTC milliseconds since the Unix epoch.
+		/// </summary>
+		private static long ToUnixMilliseconds(DateTime date)
+		{
+			var utc = (date == DateTime.MinValue || date == DateTime.MaxValue) ? date : date.ToUniversalTime();
+			var ts = utc - BsonValue.UnixEpoch;
+			return Convert.ToInt64(ts.TotalMilliseconds);
+		}
+
+		/// <summary>
+		/// Writes a BsonValue's bytes using the BsonWriter format and returns its BSON type byte.
 		/// Used as fallback for custom serializers and BsonValue-typed properties.
 		/// </summary>
-		private static void WriteElementFromBsonValue(IByteWriter writer, string key, BsonValue value)
+		private static byte WriteBsonValue(ByteWriter writer, BsonValue value)
 		{
 			switch (value.Type)
 			{
 				case BsonType.Double:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 8);
-					writer.Write((byte)0x01);
-					WriteCString(writer, key);
+					writer.EnsureCapacity(8);
 					writer.Write((Double)value.RawValue);
-					break;
+					return 0x01;
 
 				case BsonType.String:
-					var strBytes = Encoding.UTF8.GetBytes((String)value.RawValue);
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 4 + strBytes.Length + 1);
-					writer.Write((byte)0x02);
-					WriteCString(writer, key);
-					writer.Write(strBytes.Length + 1);
-					writer.Write(strBytes);
-					writer.Write((byte)0x00);
-					break;
+					writer.WriteBsonString((String)value.RawValue);
+					return 0x02;
 
 				case BsonType.Document:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1);
-					writer.Write((byte)0x03);
-					WriteCString(writer, key);
-					BsonWriter.WriteDocument(writer, (BsonDocument)value);
-					break;
+					var doc = (BsonDocument)value;
+					writer.EnsureCapacity(doc.GetBytesCount(true));
+					BsonWriter.WriteDocument(writer, doc);
+					return 0x03;
 
 				case BsonType.Array:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1);
-					writer.Write((byte)0x04);
-					WriteCString(writer, key);
-					BsonWriter.WriteArray(writer, new BsonArray((List<BsonValue>)value.RawValue));
-					break;
+					var array = value as BsonArray ?? new BsonArray((List<BsonValue>)value.RawValue);
+					writer.EnsureCapacity(array.GetBytesCount(true));
+					BsonWriter.WriteArray(writer, array);
+					return 0x04;
 
 				case BsonType.Binary:
 					var bytes = (ArraySegment<byte>)value.RawValue;
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 4 + 1 + bytes.Count);
-					writer.Write((byte)0x05);
-					WriteCString(writer, key);
+					writer.EnsureCapacity(4 + 1 + bytes.Count);
 					writer.Write(bytes.Count);
 					writer.Write((byte)0x00);
 					writer.Write(bytes);
-					break;
+					return 0x05;
 
 				case BsonType.Guid:
-					var guidBytes = ((Guid)value.RawValue).ToByteArray();
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 4 + 1 + guidBytes.Length);
-					writer.Write((byte)0x05);
-					WriteCString(writer, key);
-					writer.Write(guidBytes.Length);
+					writer.EnsureCapacity(4 + 1 + 16);
+					writer.Write(16);
 					writer.Write((byte)0x04);
-					writer.Write(guidBytes);
-					break;
+					writer.Write((Guid)value.RawValue);
+					return 0x05;
 
 				case BsonType.ObjectId:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 12);
-					writer.Write((byte)0x07);
-					WriteCString(writer, key);
-					writer.Write(((ObjectId)value.RawValue).ToByteArray());
-					break;
+					writer.EnsureCapacity(12);
+					writer.Write((ObjectId)value.RawValue);
+					return 0x07;
 
 				case BsonType.Boolean:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 1);
-					writer.Write((byte)0x08);
-					WriteCString(writer, key);
+					writer.EnsureCapacity(1);
 					writer.Write((byte)(((Boolean)value.RawValue) ? 0x01 : 0x00));
-					break;
+					return 0x08;
 
 				case BsonType.DateTime:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 8);
-					writer.Write((byte)0x09);
-					WriteCString(writer, key);
-					var date = (DateTime)value.RawValue;
-					var utc = (date == DateTime.MinValue || date == DateTime.MaxValue) ? date : date.ToUniversalTime();
-					var ts = utc - BsonValue.UnixEpoch;
-					writer.Write(Convert.ToInt64(ts.TotalMilliseconds));
-					break;
+					writer.EnsureCapacity(8);
+					writer.Write(ToUnixMilliseconds((DateTime)value.RawValue));
+					return 0x09;
 
 				case BsonType.Null:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1);
-					writer.Write((byte)0x0A);
-					WriteCString(writer, key);
-					break;
+					return 0x0A;
 
 				case BsonType.Int32:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 4);
-					writer.Write((byte)0x10);
-					WriteCString(writer, key);
+					writer.EnsureCapacity(4);
 					writer.Write((Int32)value.RawValue);
-					break;
+					return 0x10;
 
 				case BsonType.Int64:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 8);
-					writer.Write((byte)0x12);
-					WriteCString(writer, key);
+					writer.EnsureCapacity(8);
 					writer.Write((Int64)value.RawValue);
-					break;
+					return 0x12;
 
 				case BsonType.Decimal:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1 + 16);
-					writer.Write((byte)0x13);
-					WriteCString(writer, key);
+					writer.EnsureCapacity(16);
 					writer.Write((Decimal)value.RawValue);
-					break;
+					return 0x13;
 
 				case BsonType.MinValue:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1);
-					writer.Write((byte)0xFF);
-					WriteCString(writer, key);
-					break;
+					return 0xFF;
 
 				case BsonType.MaxValue:
-					writer.EnsureCapacity(1 + Encoding.UTF8.GetByteCount(key) + 1);
-					writer.Write((byte)0x7F);
-					WriteCString(writer, key);
-					break;
+					return 0x7F;
+
+				default:
+					throw new NotSupportedException($"BSON type {value.Type} not supported");
 			}
-		}
-
-		private static void WriteString(IByteWriter writer, string s)
-		{
-			var bytes = Encoding.UTF8.GetBytes(s);
-			writer.Write(bytes.Length + 1);
-			writer.Write(bytes);
-			writer.Write((byte)0x00);
-		}
-
-		private static void WriteCString(IByteWriter writer, string s)
-		{
-			var bytes = Encoding.UTF8.GetBytes(s);
-			writer.Write(bytes);
-			writer.Write((byte)0x00);
 		}
 	}
 }

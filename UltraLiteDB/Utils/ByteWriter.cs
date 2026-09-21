@@ -240,12 +240,16 @@ namespace UltraLiteDB
 
 		public void Write(Guid value)
 		{
-			this.Write(value.ToByteArray());
+			value.TryWriteBytes(new Span<byte>(_buffer, _pos, 16));
+
+			_pos += 16;
 		}
 
 		public void Write(ObjectId value)
 		{
-			this.Write(value.ToByteArray());
+			value.ToByteArray(_buffer, _pos);
+
+			_pos += 12;
 		}
 
 		internal void Write(PageAddress value)
@@ -284,6 +288,125 @@ namespace UltraLiteDB
 
 				default: throw new NotImplementedException();
 			}
+		}
+
+		#endregion
+
+		#region Allocation-free BSON helpers (used by DirectBsonWriter)
+
+		/// <summary>
+		/// Returns an upper bound on the UTF-8 byte count of <paramref name="s"/>, cheaply for short strings
+		/// and exactly for long ones (so large strings don't over-reserve buffer space).
+		/// </summary>
+		private static int Utf8Capacity(string s)
+		{
+			return s.Length <= 256 ? Encoding.UTF8.GetMaxByteCount(s.Length) : Encoding.UTF8.GetByteCount(s);
+		}
+
+		/// <summary>
+		/// Starts a BSON element: reserves the type byte and writes a pre-encoded C-string key.
+		/// Returns the position of the type byte, to be filled in with <see cref="SetByte"/>
+		/// once the value (and therefore its BSON type) has been written.
+		/// </summary>
+		internal int BeginElement(byte[] keyCString)
+		{
+			this.EnsureCapacity(1 + keyCString.Length);
+			var typePos = _pos;
+			new ReadOnlySpan<byte>(keyCString).CopyTo(new Span<byte>(_buffer, _pos + 1, keyCString.Length));
+			_pos += 1 + keyCString.Length;
+			return typePos;
+		}
+
+		/// <summary>
+		/// Starts a BSON array element whose key is <paramref name="index"/>. See <see cref="BeginElement(byte[])"/>.
+		/// </summary>
+		internal int BeginElement(int index)
+		{
+			this.EnsureCapacity(1);
+			var typePos = _pos++;
+			this.WriteIndexCString(index);
+			return typePos;
+		}
+
+		/// <summary>
+		/// Starts a BSON element with a string key. See <see cref="BeginElement(byte[])"/>.
+		/// </summary>
+		internal int BeginElement(string key)
+		{
+			this.EnsureCapacity(1);
+			var typePos = _pos++;
+			this.WriteCString(key);
+			return typePos;
+		}
+
+		/// <summary>
+		/// Overwrites a single byte at an absolute position (used to back-fill element type bytes).
+		/// </summary>
+		internal void SetByte(int position, byte value)
+		{
+			_buffer[position] = value;
+		}
+
+		/// <summary>
+		/// Overwrites an Int32 at an absolute position (used to back-fill document/array lengths).
+		/// </summary>
+		internal void SetInt32(int position, int value)
+		{
+			BinaryPrimitives.WriteInt32LittleEndian(new Span<byte>(_buffer, position, 4), value);
+		}
+
+		/// <summary>
+		/// Writes raw bytes, growing the buffer if needed.
+		/// </summary>
+		internal void WriteRaw(byte[] value)
+		{
+			this.EnsureCapacity(value.Length);
+			System.Buffer.BlockCopy(value, 0, _buffer, _pos, value.Length);
+			_pos += value.Length;
+		}
+
+		/// <summary>
+		/// Writes a null-terminated UTF-8 C-string, encoding directly into the buffer.
+		/// </summary>
+		internal void WriteCString(string value)
+		{
+			this.EnsureCapacity(Utf8Capacity(value) + 1);
+			_pos += Encoding.UTF8.GetBytes(value, 0, value.Length, _buffer, _pos);
+			_buffer[_pos++] = 0x00;
+		}
+
+		/// <summary>
+		/// Writes a non-negative integer as a null-terminated ASCII C-string (BSON array index keys).
+		/// </summary>
+		internal void WriteIndexCString(int index)
+		{
+			this.EnsureCapacity(11);
+
+			var digits = 1;
+			for (var v = index; v >= 10; v /= 10) digits++;
+
+			var end = _pos + digits;
+			for (var p = end - 1; p >= _pos; p--)
+			{
+				_buffer[p] = (byte)('0' + (index % 10));
+				index /= 10;
+			}
+
+			_buffer[end] = 0x00;
+			_pos = end + 1;
+		}
+
+		/// <summary>
+		/// Writes a BSON string value (Int32 length including terminator, UTF-8 bytes, 0x00), encoding
+		/// directly into the buffer.
+		/// </summary>
+		internal void WriteBsonString(string value)
+		{
+			this.EnsureCapacity(4 + Utf8Capacity(value) + 1);
+			var count = Encoding.UTF8.GetBytes(value, 0, value.Length, _buffer, _pos + 4);
+			BinaryPrimitives.WriteInt32LittleEndian(new Span<byte>(_buffer, _pos, 4), count + 1);
+			_pos += 4 + count;
+			_buffer[_pos++] = 0x00;
 		}
 
 		#endregion

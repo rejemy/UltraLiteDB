@@ -83,15 +83,20 @@ namespace UltraLiteDB
 		{
 			if (stream == null) throw new ArgumentNullException(nameof(stream));
 
-			var reader = new StreamByteReader(stream);
-
 			// If target is BsonDocument, use existing path
 			if (type == typeof(BsonDocument))
 			{
-				return BsonReader.ReadDocument(reader);
+				return BsonReader.ReadDocument(new StreamByteReader(stream));
 			}
 
-			return DirectBsonReader.ReadObjectDirect(reader, this, type);
+			// Read exactly one document (its length prefix says how much) into a reusable buffer, then
+			// parse from memory: forward-only, and far fewer stream calls than reading field by field
+			var buffer = DirectBuffers.ReadDocument(stream, out var length);
+
+			var result = DirectBsonReader.ReadObjectDirect(new ByteReader(new ArraySegment<byte>(buffer, 0, length)), this, type);
+
+			DirectBuffers.ReturnReadBuffer(buffer);
+			return result;
 		}
 	}
 

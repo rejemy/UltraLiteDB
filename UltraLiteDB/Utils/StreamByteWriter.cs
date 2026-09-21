@@ -9,11 +9,9 @@ namespace UltraLiteDB
 	/// in little-endian format, preserving BSON wire compatibility.
 	/// </summary>
 	/// <remarks>
-	/// The direct (POCO) serializer backfills document/array length prefixes by rewinding the write
-	/// position, which requires a seekable stream. Setting <see cref="Position"/> throws
-	/// <see cref="NotSupportedException"/> when the underlying stream is not seekable. Writing a
-	/// <see cref="BsonDocument"/> is forward-only and never sets the position, so it works with any
-	/// writable stream.
+	/// Writes are forward-only, so any writable stream is supported (writing a <see cref="BsonDocument"/>
+	/// never sets the position). Only setting <see cref="Position"/>, which rewinds to backfill data,
+	/// requires a seekable stream; it throws <see cref="NotSupportedException"/> otherwise.
 	/// </remarks>
 	public class StreamByteWriter : IByteWriter
 	{
@@ -30,6 +28,14 @@ namespace UltraLiteDB
 			get { return _pos; }
 			set
 			{
+				if (!_stream.CanSeek)
+				{
+					throw new NotSupportedException(
+						"Setting the write position requires a seekable stream. To write to a non-seekable stream " +
+						"(e.g. NetworkStream), buffer to a MemoryStream first, or use a forward-only write such as " +
+						"serializing a BsonDocument.");
+				}
+
 				_stream.Seek(_origin + value, SeekOrigin.Begin);
 				_pos = value;
 			}
@@ -38,18 +44,12 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Initializes a <see cref="StreamByteWriter"/> that writes to the specified stream.
 		/// </summary>
-		/// <param name="stream">The writable stream to write BSON data to.</param>
+		/// <param name="stream">The writable stream to write BSON data to. It only needs to be seekable
+		/// if <see cref="Position"/> will be set.</param>
 		public StreamByteWriter(Stream stream)
 		{
 			_stream = stream ?? throw new ArgumentNullException(nameof(stream));
 			if (!stream.CanWrite) throw new ArgumentException("Stream must be writable.", nameof(stream));
-			if (!_stream.CanSeek)
-			{
-				throw new NotSupportedException(
-					"Setting the write position requires a seekable stream. Serializing a POCO directly to a " +
-					"non-seekable stream (e.g. NetworkStream) is not supported; buffer to a MemoryStream first, " +
-					"or serialize a BsonDocument (which writes forward-only).");
-			}
 			_origin = stream.CanSeek ? stream.Position : 0;
 			_pos = 0;
 		}

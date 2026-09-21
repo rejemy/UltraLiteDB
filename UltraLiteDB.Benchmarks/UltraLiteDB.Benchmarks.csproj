@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <AssemblyName>UltraLiteDB.Benchmarks</AssemblyName>
+    <RootNamespace>UltraLiteDB.Benchmarks</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- trim/AOT analysis warnings: this project uses reflection on purpose, like the library does -->
+    <NoWarn>IL2026;IL2055;IL2057;IL2060;IL2067;IL2070;IL2072;IL2075;IL2080;IL2090;IL2104;IL3050;IL3053</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    NativeAOT build (the closest local stand-in for Unity IL2CPP). Enabled with -p:Aot=true rather than
+    -p:PublishAot=true, because a global PublishAot would also flow to the netstandard2.1 library and fail.
+  -->
+  <PropertyGroup Condition="'$(Aot)' == 'true'">
+    <PublishAot>true</PublishAot>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\UltraLiteDB\UltraLiteDB.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- keep reflection metadata for the models and the library under NativeAOT trimming -->
+    <TrimmerRootAssembly Include="UltraLiteDB.Benchmarks" />
+    <TrimmerRootAssembly Include="UltraLiteDB" />
+  </ItemGroup>
+
+</Project>

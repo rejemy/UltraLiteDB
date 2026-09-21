@@ -196,7 +196,7 @@ namespace UltraLiteDB.Tests.Document
 		#region Non-seekable streams
 
 		[TestMethod]
-		public void NonSeekable_Poco_Serialize_Throws()
+		public void NonSeekable_Poco_Serialize_Succeeds()
 		{
 			var mapper = new BsonMapper();
 			var obj = CreateSimple();
@@ -204,9 +204,64 @@ namespace UltraLiteDB.Tests.Document
 			using var inner = new MemoryStream();
 			using var wrapper = new NonSeekableStream(inner);
 
-			Assert.Throws<NotSupportedException>(() => mapper.SerializeToStream(obj, wrapper));
+			// the document is buffered and written in one call, so no seeking is needed
+			mapper.SerializeToStream(obj, wrapper);
+
+			CollectionAssert.AreEqual(mapper.SerializeToBytes(obj), inner.ToArray());
 		}
 
+		[TestMethod]
+		public void Poco_Deserialize_CorruptLengthPrefix_Throws()
+		{
+			// claims ~2 GB but the stream ends almost immediately: must fail without allocating the claimed size
+			var bytes = new byte[] { 0xFF, 0xFF, 0xFF, 0x7F, 0x10, (byte)'a', 0x00, 0x01, 0x00, 0x00, 0x00 };
+
+			using var stream = new MemoryStream(bytes);
+
+			Assert.Throws<EndOfStreamException>(() => new BsonMapper().DeserializeFromStream<SimplePrimitivesModel>(stream));
+		}
+
+		[TestMethod]
+		public void NonSeekable_Poco_Deserialize_Succeeds()
+		{
+			var mapper = new BsonMapper();
+			var obj = CreateSimple();
+			var bytes = mapper.SerializeToBytes(obj);
+
+			using var inner = new MemoryStream(bytes);
+			using var wrapper = new NonSeekableStream(inner);
+
+			var obj2 = mapper.DeserializeFromStream<SimplePrimitivesModel>(wrapper);
+
+			CollectionAssert.AreEqual(bytes, mapper.SerializeToBytes(obj2));
+		}
+
+
+		[TestMethod]
+		public void NonSeekable_Document_Serialize_Succeeds()
+		{
+			var doc = CreateDoc();
+
+			using var inner = new MemoryStream();
+			using var wrapper = new NonSeekableStream(inner);
+
+			// writing a document is forward-only, so no seeking is needed
+			BsonSerializer.Serialize(doc, wrapper);
+
+			CollectionAssert.AreEqual(BsonSerializer.Serialize(doc), inner.ToArray());
+		}
+
+		[TestMethod]
+		public void NonSeekable_StreamByteWriter_SetPosition_Throws()
+		{
+			using var inner = new MemoryStream();
+			using var wrapper = new NonSeekableStream(inner);
+
+			var writer = new StreamByteWriter(wrapper);
+			writer.Write(42);
+
+			Assert.Throws<NotSupportedException>(() => writer.Position = 0);
+		}
 
 		[TestMethod]
 		public void NonSeekable_Document_Deserialize_Succeeds()

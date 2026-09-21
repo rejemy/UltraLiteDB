@@ -237,11 +237,15 @@ namespace UltraLiteDB
 				return fieldInfo.GetValue;
 			}
 
-			// if is property, use Emit IL code
 			var propertyInfo = (PropertyInfo)memberInfo;
 			var getMethod = propertyInfo.GetGetMethod(true);
 
 			if (getMethod == null) return null;
+
+			// auto-property: read the backing field directly (identical result, much cheaper than MethodInfo.Invoke)
+			var backingField = GetAutoPropertyBackingField(propertyInfo, getMethod);
+
+			if (backingField != null) return backingField.GetValue;
 
 			return target => getMethod.Invoke(target, null);
 		}
@@ -270,22 +274,62 @@ namespace UltraLiteDB
 
 			}
 
-			// if is property, use Emit IL code
 			var propertyInfo = (PropertyInfo)memberInfo;
 
 			var setMethod = propertyInfo.GetSetMethod(true);
 
 			if (setMethod == null) return null;
 
+			// auto-property: write the backing field directly (identical effect, no MethodInfo.Invoke and no
+			// argument array). init-only backing fields are left to the accessor.
+			var backingField = GetAutoPropertyBackingField(propertyInfo, setMethod);
+
+			if (backingField != null && !backingField.IsInitOnly)
+			{
+				return CreateGenericSetter(type, backingField);
+			}
+
 			if (propertyInfo.PropertyType == typeof(byte[]))
 			{
 				// Special setter for byte arrays
-				return (target, value) => setMethod.Invoke(target, new[] { ((ArraySegment<byte>)value!).Array });
+				return (target, value) => InvokeSetter(setMethod, target, ((ArraySegment<byte>)value!).Array);
 			}
 			else
 			{
-				return (target, value) => setMethod.Invoke(target, new[] { value });
+				return (target, value) => InvokeSetter(setMethod, target, value);
 			}
+		}
+
+		/// <summary>
+		/// Returns the compiler-generated backing field of an auto-property accessor, or null if the accessor
+		/// has a user-written body (so it may contain logic) or the backing field can't be found.
+		/// </summary>
+		private static FieldInfo? GetAutoPropertyBackingField(PropertyInfo propertyInfo, MethodInfo accessor)
+		{
+			if (!accessor.IsDefined(typeof(System.Runtime.CompilerServices.CompilerGeneratedAttribute), false)) return null;
+
+			var field = propertyInfo.DeclaringType?.GetField("<" + propertyInfo.Name + ">k__BackingField", BindingFlags.Instance | BindingFlags.NonPublic);
+
+			return field != null && field.FieldType == propertyInfo.PropertyType ? field : null;
+		}
+
+		/// <summary>
+		/// Reusable single-element argument array for <see cref="InvokeSetter"/>. Taken out of the slot while
+		/// in use, so a setter that re-enters the mapper on the same thread just gets a fresh array.
+		/// </summary>
+		[ThreadStatic]
+		private static object?[]? _setterArgs;
+
+		private static void InvokeSetter(MethodInfo setMethod, object target, object? value)
+		{
+			var args = _setterArgs ?? new object?[1];
+			_setterArgs = null;
+
+			args[0] = value;
+			setMethod.Invoke(target, args);
+			args[0] = null;
+
+			_setterArgs = args;
 		}
 
 	}

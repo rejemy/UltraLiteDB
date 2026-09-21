@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UltraLiteDB", "UltraLiteDB\
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LiteDB.Tests", "UltraLiteDB.Tests\UltraLiteDB.Tests.csproj", "{DC3C8B07-0FB3-45B3-BE60-04609DBC0208}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UltraLiteDB.Benchmarks", "UltraLiteDB.Benchmarks\UltraLiteDB.Benchmarks.csproj", "{A4E637C7-DA7C-4B76-A46F-874A8BE24927}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
         {DC3C8B07-0FB3-45B3-BE60-04609DBC0208}.Debug|Any CPU.Build.0 = Debug|Any CPU
         {DC3C8B07-0FB3-45B3-BE60-04609DBC0208}.Release|Any CPU.ActiveCfg = Release|Any CPU
         {DC3C8B07-0FB3-45B3-BE60-04609DBC0208}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4E637C7-DA7C-4B76-A46F-874A8BE24927}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4E637C7-DA7C-4B76-A46F-874A8BE24927}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4E637C7-DA7C-4B76-A46F-874A8BE24927}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4E637C7-DA7C-4B76-A46F-874A8BE24927}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

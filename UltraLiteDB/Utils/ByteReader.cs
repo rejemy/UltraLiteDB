@@ -169,11 +169,13 @@ namespace UltraLiteDB
 		public Decimal ReadDecimal()
 		{
 			_pos += 16;
-			var a = BitConverter.ToInt32(_buffer, _pos - 16);
-			var b = BitConverter.ToInt32(_buffer, _pos - 12);
-			var c = BitConverter.ToInt32(_buffer, _pos - 8);
-			var d = BitConverter.ToInt32(_buffer, _pos - 4);
-			return new Decimal(new int[] { a, b, c, d });
+			var lo = BitConverter.ToInt32(_buffer, _pos - 16);
+			var mid = BitConverter.ToInt32(_buffer, _pos - 12);
+			var hi = BitConverter.ToInt32(_buffer, _pos - 8);
+			var flags = BitConverter.ToInt32(_buffer, _pos - 4);
+			// same validation as new Decimal(int[]) (scale <= 28, no stray flag bits), without the array
+			if ((flags & 0x7F00FFFF) != 0 || ((flags >> 16) & 0xFF) > 28) throw new ArgumentException("Invalid decimal bits");
+			return new Decimal(lo, mid, hi, flags < 0, (byte)((flags >> 16) & 0xFF));
 		}
 
 		public Byte[] ReadBytes(int count)
@@ -270,12 +272,50 @@ namespace UltraLiteDB
 
 		public Guid ReadGuid()
 		{
-			return new Guid(this.ReadBytes(16));
+			var value = new Guid(new ReadOnlySpan<byte>(_buffer, _pos, 16));
+			_pos += 16;
+			return value;
 		}
 
 		public ObjectId ReadObjectId()
 		{
-			return new ObjectId(this.ReadBytes(12));
+			var value = new ObjectId(_buffer, _pos);
+			_pos += 12;
+			return value;
+		}
+
+		/// <summary>
+		/// Reads a null-terminated C-string without decoding it, returning a span over its UTF-8 bytes
+		/// (terminator excluded). The span is only valid until the underlying buffer is changed.
+		/// </summary>
+		internal ReadOnlySpan<byte> ReadCStringSpan()
+		{
+			var span = new ReadOnlySpan<byte>(_buffer, _pos, _length - _pos);
+			var length = span.IndexOf((byte)0x00);
+			if (length < 0) length = span.Length; // unterminated (corrupt) data: consume the rest
+
+			_pos += length + 1;
+			return span.Slice(0, length);
+		}
+
+		/// <summary>
+		/// Returns a span over the next <paramref name="count"/> bytes and advances past them.
+		/// The span is only valid until the underlying buffer is changed.
+		/// </summary>
+		internal ReadOnlySpan<byte> ReadSpan(int count)
+		{
+			var span = new ReadOnlySpan<byte>(_buffer, _pos, count);
+			_pos += count;
+			return span;
+		}
+
+		/// <summary>
+		/// Skips past a null-terminated C-string without decoding it.
+		/// </summary>
+		internal void SkipCString()
+		{
+			var length = new ReadOnlySpan<byte>(_buffer, _pos, _length - _pos).IndexOf((byte)0x00);
+			_pos = length < 0 ? _length + 1 : _pos + length + 1;
 		}
 
 		internal PageAddress ReadPageAddress()

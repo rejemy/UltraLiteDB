@@ -54,6 +54,12 @@ namespace UltraLiteDB
 		}
 
 		/// <summary>
+		/// Cached BSON string payload of this type's <c>_type</c> discriminator ("FullName, AssemblyName"),
+		/// written by the direct serializer when an instance is stored in a slot of a different declared type.
+		/// </summary>
+		internal byte[]? TypeNamePayload;
+
+		/// <summary>
 		/// Finds a <see cref="MemberMapper"/> by resolving the member path from a LINQ expression.
 		/// </summary>
 		public MemberMapper GetMember(Expression expr)

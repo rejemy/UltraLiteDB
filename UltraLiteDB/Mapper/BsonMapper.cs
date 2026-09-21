@@ -116,6 +116,28 @@ namespace UltraLiteDB
 		internal Dictionary<BsonValue, Type> CustomIdToType => _customIdToType;
 		internal Func<Type, object> TypeInstantiator => _typeInstantiator;
 
+		/// <summary>
+		/// Incremented whenever custom serializers change, invalidating the direct serializer's cached
+		/// per-type dispatch (<see cref="DirectWriteInfo"/>/<see cref="DirectReadInfo"/>).
+		/// </summary>
+		internal int CustomTypesVersion;
+
+		private readonly Dictionary<Type, DirectReadInfo> _directReadInfo = new Dictionary<Type, DirectReadInfo>();
+
+		/// <summary>
+		/// Gets the cached direct-deserializer conversion info for a target type.
+		/// </summary>
+		internal DirectReadInfo GetDirectReadInfo(Type type)
+		{
+			lock (_directReadInfo)
+			{
+				_directReadInfo.TryGetValue(type, out var cached);
+				var info = DirectReadInfo.Get(this, cached, type);
+				if (info != cached) _directReadInfo[type] = info;
+				return info;
+			}
+		}
+
 		#endregion
 
 		/// <summary>
@@ -162,6 +184,7 @@ namespace UltraLiteDB
 		{
 			_customSerializer[typeof(T)] = (o) => serialize((T)o);
 			_customDeserializer[typeof(T)] = (b) => (T)deserialize(b);
+			this.CustomTypesVersion++;
 		}
 
 		/// <summary>
@@ -174,6 +197,7 @@ namespace UltraLiteDB
 		{
 			_customSerializer[type] = (o) => serialize(o);
 			_customDeserializer[type] = (b) => deserialize(b);
+			this.CustomTypesVersion++;
 		}
 
 		/// <summary>
