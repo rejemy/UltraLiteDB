@@ -263,7 +263,7 @@ namespace UltraLiteDB
 			var definitionName = GetDefinitionName(name);
 			var isDeclaredType = definitionName == GetDefinitionName(declaredType);
 
-			if (!isDeclaredType && allowList.Filter == null && !allowList.Names.Contains(definitionName) && !MatchesAllowedPattern(allowList, definitionName))
+			if (!AllowAllTypes && !isDeclaredType && allowList.Filter == null && !allowList.Names.Contains(definitionName) && !MatchesAllowedPattern(allowList, definitionName))
 			{
 				throw UltraLiteException.TypeNotAllowed(name, declaredType);
 			}
