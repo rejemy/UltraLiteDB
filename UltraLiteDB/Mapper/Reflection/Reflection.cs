@@ -242,6 +242,11 @@ namespace UltraLiteDB
 
 			if (getMethod == null) return null;
 
+			// fastest: a typed delegate bound to the getter, when this runtime supports building one
+			var typed = CreateTypedAccessor(type, propertyInfo, getMethod, null, null);
+
+			if (typed != null) return typed.Get;
+
 			// auto-property: read the backing field directly (identical result, much cheaper than MethodInfo.Invoke)
 			var backingField = GetAutoPropertyBackingField(propertyInfo, getMethod);
 
@@ -280,25 +285,142 @@ namespace UltraLiteDB
 
 			if (setMethod == null) return null;
 
-			// auto-property: write the backing field directly (identical effect, no MethodInfo.Invoke and no
-			// argument array). init-only backing fields are left to the accessor.
+			// reflection setter: an auto-property writes its backing field directly (identical effect, no
+			// MethodInfo.Invoke and no argument array); init-only backing fields are left to the accessor
+			GenericSetter reflectionSetter;
 			var backingField = GetAutoPropertyBackingField(propertyInfo, setMethod);
 
 			if (backingField != null && !backingField.IsInitOnly)
 			{
-				return CreateGenericSetter(type, backingField);
+				reflectionSetter = backingField.SetValue;
 			}
+			else
+			{
+				reflectionSetter = (target, value) => InvokeSetter(setMethod, target, value);
+			}
+
+			// fastest: a typed delegate bound to the setter, when this runtime supports building one. Values that
+			// aren't exactly the property type still go through the reflection setter, which converts them.
+			var typed = CreateTypedAccessor(type, propertyInfo, null, setMethod, reflectionSetter);
+			var setter = typed != null ? typed.Set : reflectionSetter;
 
 			if (propertyInfo.PropertyType == typeof(byte[]))
 			{
 				// Special setter for byte arrays
-				return (target, value) => InvokeSetter(setMethod, target, ((ArraySegment<byte>)value!).Array);
+				return (target, value) => setter(target, ((ArraySegment<byte>)value!).Array);
 			}
-			else
+
+			return setter;
+		}
+
+		#region Typed accessors
+
+		/// <summary>
+		/// Switch for the typed-accessor strategy, on by default. It exists so tests can exercise the reflection
+		/// fallback that runtimes without runtime generic instantiation (NativeAOT, older IL2CPP) use. Only
+		/// affects entity mappers built after it changes.
+		/// </summary>
+		internal static bool TypedAccessorsEnabled = true;
+
+		/// <summary>
+		/// Whether this runtime can build <see cref="TypedAccessor{TOwner, TValue}"/> instantiations with
+		/// MakeGenericType and actually run them. Probed once, on first use, with a value type that appears in
+		/// no generic instantiation in code, through a virtual (interface) accessor — the demanding cases — plus
+		/// the unboxed primitive calls. An AOT compiler that precompiles statically visible instantiations (NativeAOT)
+		/// can pass the probe while lacking others, so each accessor is also verified when it is created.
+		/// </summary>
+		internal static bool TypedAccessorsSupported => TypedAccessorSupport.Available;
+
+		private static class TypedAccessorSupport
+		{
+			public static readonly bool Available = Probe();
+
+			private static bool Probe()
 			{
-				return (target, value) => InvokeSetter(setMethod, target, value);
+				try
+				{
+					var property = typeof(ProbeOwner).GetProperty(nameof(ProbeOwner.Value))!;
+					var accessorType = typeof(TypedAccessor<,>).MakeGenericType(typeof(ProbeOwner), typeof(ProbeValue));
+					var accessor = (TypedAccessor)Activator.CreateInstance(accessorType, property.GetGetMethod(true), property.GetSetMethod(true), null)!;
+
+					var owner = new ProbeOwner();
+					accessor.Set(owner, new ProbeValue { A = 0x1234567890L, B = 42 });
+					var value = (ProbeValue)accessor.Get(owner)!;
+
+					// and the unboxed primitive path the direct serializer uses
+					var number = typeof(ProbeOwner).GetProperty(nameof(ProbeOwner.Number))!;
+					var numberAccessor = (TypedAccessor)Activator.CreateInstance(
+						typeof(TypedAccessor<,>).MakeGenericType(typeof(ProbeOwner), typeof(int)), number.GetGetMethod(true), number.GetSetMethod(true), null)!;
+					numberAccessor.SetInt32(owner, 7);
+
+					return value.A == 0x1234567890L && value.B == 42 && owner.Value.B == 42 &&
+						numberAccessor.Primitive == DirectKind.Int32 && numberAccessor.GetInt32(owner) == 7;
+				}
+				catch (Exception)
+				{
+					// NotSupportedException (NativeAOT), ExecutionEngineException (IL2CPP without full generic
+					// sharing), a stripped member, ...: use plain reflection everywhere
+					return false;
+				}
 			}
 		}
+
+		[Preserve]
+		private interface IProbeOwner
+		{
+			ProbeValue Value { get; set; }
+		}
+
+		[Preserve]
+		private sealed class ProbeOwner : IProbeOwner
+		{
+			[Preserve]
+			public ProbeValue Value { get; set; }
+
+			[Preserve]
+			public int Number { get; set; }
+		}
+
+		[Preserve]
+		private struct ProbeValue
+		{
+			public long A;
+			public int B;
+		}
+
+		/// <summary>
+		/// Builds a typed accessor for a property getter or setter, or returns null when this member or runtime
+		/// can't use one (the caller then uses reflection).
+		/// </summary>
+		private static TypedAccessor? CreateTypedAccessor(Type ownerType, PropertyInfo property, MethodInfo? getMethod, MethodInfo? setMethod, GenericSetter? convertingSetter)
+		{
+			if (!TypedAccessorsEnabled || !TypedAccessorsSupported) return null;
+
+			var method = getMethod ?? setMethod!;
+			var valueType = property.PropertyType;
+
+			// Class owners only: a struct's accessors need a reference to the boxed value, which the object-based
+			// setter shape can't express. Non-virtual (or sealed) accessors only, so dispatch is unchanged.
+			if (ownerType.IsValueType || ownerType.ContainsGenericParameters || method.IsStatic) return null;
+			if (method.IsVirtual && !method.IsFinal) return null;
+			if (valueType.IsByRef || valueType.IsPointer || valueType.ContainsGenericParameters) return null;
+
+			try
+			{
+				var accessorType = typeof(TypedAccessor<,>).MakeGenericType(ownerType, valueType);
+				var accessor = (TypedAccessor)Activator.CreateInstance(accessorType, getMethod, setMethod, convertingSetter)!;
+
+				// the probe proves the runtime can do this in general; an AOT compiler may still have precompiled some
+				// instantiations and not others (NativeAOT does exactly that), so check this one before relying on it
+				return accessor.Verify() ? accessor : null;
+			}
+			catch (Exception)
+			{
+				return null;
+			}
+		}
+
+		#endregion
 
 		/// <summary>
 		/// Returns the compiler-generated backing field of an auto-property accessor, or null if the accessor

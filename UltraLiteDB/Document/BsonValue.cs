@@ -689,7 +689,7 @@ namespace UltraLiteDB
 				case BsonType.Double: return 8;
 				case BsonType.Decimal: return 16;
 
-				case BsonType.String: return Encoding.UTF8.GetByteCount(this.AsString);
+				case BsonType.String: return GetUtf8ByteCount(this.AsString);
 
 				case BsonType.Binary: return this.AsBinary.Count;
 				case BsonType.ObjectId: return 12;
@@ -710,15 +710,47 @@ namespace UltraLiteDB
 		/// </summary>
 		protected int GetBytesCountElement(string key, BsonValue value)
 		{
+			return GetBytesCountElement(GetUtf8ByteCount(key), value);
+		}
+
+		/// <summary>
+		/// Calculates the BSON byte size for a single element whose key is <paramref name="keyLength"/> UTF-8 bytes.
+		/// </summary>
+		protected int GetBytesCountElement(int keyLength, BsonValue value)
+		{
 			// check if data type is variant
 			var variant = value.Type == BsonType.String || value.Type == BsonType.Binary || value.Type == BsonType.Guid;
 
 			return
 				1 + // element type
-				Encoding.UTF8.GetByteCount(key) + // CString
+				keyLength + // CString
 				1 + // CString \0
 				value.GetBytesCount(true) +
 				(variant ? 5 : 0); // bytes.Length + 0x??
+		}
+
+		/// <summary>
+		/// UTF-8 byte count of <paramref name="value"/>, counting ASCII (the common case for keys and game data)
+		/// directly and leaving the rest to the encoder.
+		/// </summary>
+		internal static int GetUtf8ByteCount(string value)
+		{
+			for (var i = 0; i < value.Length; i++)
+			{
+				if (value[i] >= 0x80) return Encoding.UTF8.GetByteCount(value);
+			}
+
+			return value.Length;
+		}
+
+		/// <summary>
+		/// Byte length of a BSON array index key: the decimal digits of <paramref name="index"/>.
+		/// </summary>
+		internal static int GetIndexKeyLength(int index)
+		{
+			var digits = 1;
+			for (var v = index; v >= 10; v /= 10) digits++;
+			return digits;
 		}
 
 		#endregion

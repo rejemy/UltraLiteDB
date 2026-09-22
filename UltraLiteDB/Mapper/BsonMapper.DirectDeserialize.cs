@@ -86,7 +86,7 @@ namespace UltraLiteDB
 			// If target is BsonDocument, use existing path
 			if (type == typeof(BsonDocument))
 			{
-				return BsonReader.ReadDocument(new StreamByteReader(stream));
+				return BsonSerializer.Deserialize(stream);
 			}
 
 			// Read exactly one document (its length prefix says how much) into a reusable buffer, then

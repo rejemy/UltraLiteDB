@@ -49,6 +49,7 @@ namespace UltraLiteDB
 	{
 		public readonly Type DeclaredType;
 		public readonly Type RuntimeType;
+		public readonly RuntimeTypeHandle RuntimeHandle;
 		public readonly int Version;
 		public readonly DirectKind Kind;
 
@@ -72,6 +73,7 @@ namespace UltraLiteDB
 		{
 			this.DeclaredType = declaredType;
 			this.RuntimeType = runtimeType;
+			this.RuntimeHandle = runtimeType.TypeHandle;
 			this.Version = version;
 			this.Kind = kind;
 			this.Custom = custom;
@@ -80,16 +82,18 @@ namespace UltraLiteDB
 		}
 
 		/// <summary>
-		/// Returns <paramref name="cached"/> if it still describes <paramref name="runtimeType"/>, otherwise builds a new info.
+		/// Returns <paramref name="cached"/> if it still describes <paramref name="value"/>'s runtime type, otherwise
+		/// builds a new info. Compares type handles rather than calling GetType(): under IL2CPP, GetType() (like
+		/// typeof) is a locked hash lookup, while reading an object's type handle is a pointer read.
 		/// </summary>
-		public static DirectWriteInfo Get(BsonMapper mapper, DirectWriteInfo? cached, Type declaredType, Type runtimeType)
+		public static DirectWriteInfo Get(BsonMapper mapper, DirectWriteInfo? cached, Type declaredType, object value)
 		{
-			if (cached != null && cached.RuntimeType == runtimeType && cached.Version == mapper.CustomTypesVersion)
+			if (cached != null && cached.RuntimeHandle.Equals(Type.GetTypeHandle(value)) && cached.Version == mapper.CustomTypesVersion)
 			{
 				return cached;
 			}
 
-			return Create(mapper, declaredType, runtimeType);
+			return Create(mapper, declaredType, value.GetType());
 		}
 
 		/// <summary>
@@ -169,6 +173,7 @@ namespace UltraLiteDB
 		public readonly Type? KeyType;
 		public readonly Type? ValueType;
 		public readonly bool KeyIsEnum;
+		public readonly bool KeyIsString;
 
 		// collection info, resolved on first array read
 		private volatile bool _collectionResolved;
@@ -201,6 +206,7 @@ namespace UltraLiteDB
 				this.KeyType = args[0];
 				this.ValueType = args[1];
 				this.KeyIsEnum = args[0].GetTypeInfo().IsEnum;
+				this.KeyIsString = args[0] == typeof(string);
 			}
 		}
 
@@ -336,18 +342,24 @@ namespace UltraLiteDB
 		}
 
 		/// <summary>
-		/// Converts UTF-8 name bytes to a boxed enum value, with the same result as <c>Enum.Parse(type, name)</c>.
+		/// Converts UTF-8 name bytes (<paramref name="length"/> bytes of <paramref name="buffer"/> at
+		/// <paramref name="start"/>) to a boxed enum value, with the same result as <c>Enum.Parse(type, name)</c>.
 		/// </summary>
-		public object Parse(ReadOnlySpan<byte> utf8)
+		public object Parse(byte[] buffer, int start, int length)
 		{
 			var parsed = _parsed;
 
 			for (var i = 0; i < parsed.Length; i++)
 			{
-				if (utf8.SequenceEqual(parsed[i].Key)) return parsed[i].Value;
+				var key = parsed[i].Key;
+				if (key.Length != length) continue;
+
+				var j = 0;
+				while (j < length && key[j] == buffer[start + j]) j++;
+				if (j == length) return parsed[i].Value;
 			}
 
-			var value = System.Enum.Parse(_type, Encoding.UTF8.GetString(utf8));
+			var value = System.Enum.Parse(_type, Encoding.UTF8.GetString(buffer, start, length));
 
 			lock (_sync)
 			{
@@ -355,7 +367,9 @@ namespace UltraLiteDB
 				{
 					var copy = new KeyValuePair<byte[], object>[_parsed.Length + 1];
 					Array.Copy(_parsed, copy, _parsed.Length);
-					copy[_parsed.Length] = new KeyValuePair<byte[], object>(utf8.ToArray(), value);
+					var name = new byte[length];
+					System.Buffer.BlockCopy(buffer, start, name, 0, length);
+					copy[_parsed.Length] = new KeyValuePair<byte[], object>(name, value);
 					Volatile.Write(ref _parsed, copy);
 				}
 			}

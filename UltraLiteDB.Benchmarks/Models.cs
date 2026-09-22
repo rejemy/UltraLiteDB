@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -46,11 +48,15 @@ namespace UltraLiteDB.Benchmarks
 	}
 
 	// The same shape using public fields (what Unity's JsonUtility serializes), mapped with IncludeFields.
+	// [Serializable] is for JsonUtility (the Unity reference benchmark); the BSON mapper doesn't need it.
 
+	[Serializable]
 	public class FVec3 { public float X; public float Y; public float Z; }
 
+	[Serializable]
 	public class FItem { public int Id; public string? Name; public ItemKind Kind; public float Weight; public int Count; public bool Equipped; }
 
+	[Serializable]
 	public class FPlayer
 	{
 		public int Id; public string? Name; public int Level; public long Experience; public double Gold; public float Health; public bool IsAlive;

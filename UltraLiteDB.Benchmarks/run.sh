@@ -2,9 +2,10 @@
 #
 # Runs the UltraLiteDB benchmarks. See README.md.
 #
-#   ./run.sh [jit|aot|both] [serializer|accessors|all] [--seconds N] [--filter text]
+#   ./run.sh [jit|aot|both|il2cpp] [serializer|accessors|all] [--seconds N] [--filter text]
 #
-# Defaults: both runtimes, serializer suite, 3 seconds per benchmark.
+# Defaults: both (JIT then NativeAOT), serializer suite, 3 seconds per benchmark.
+# il2cpp builds and runs a real Unity IL2CPP player instead (run-il2cpp.sh; needs Unity, takes minutes).
 
 set -e
 cd "$(dirname "$0")"
@@ -12,6 +13,7 @@ cd "$(dirname "$0")"
 mode="both"
 case "$1" in
 	jit|aot|both) mode="$1"; shift ;;
+	il2cpp) shift; exec ./run-il2cpp.sh "$@" ;;
 esac
 
 if [ "$mode" = "jit" ] || [ "$mode" = "both" ]; then

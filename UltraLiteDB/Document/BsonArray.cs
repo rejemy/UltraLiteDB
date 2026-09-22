@@ -157,6 +157,12 @@ namespace UltraLiteDB
 
 		private int _length;
 
+		/// <summary>
+		/// Records this array's serialized length, as <see cref="GetBytesCount(bool)"/> with recalc would; used by
+		/// the single-pass writer, which learns the length by writing.
+		/// </summary>
+		internal void SetBytesCount(int length) => _length = length;
+
 		public override int GetBytesCount(bool recalc)
 		{
 			if (recalc == false && _length > 0) return _length;
@@ -166,7 +172,7 @@ namespace UltraLiteDB
 
 			for (var i = 0; i < array.Count; i++)
 			{
-				length += this.GetBytesCountElement(i.ToString(), array[i]);
+				length += this.GetBytesCountElement(GetIndexKeyLength(i), array[i]);
 			}
 
 			return _length = length;

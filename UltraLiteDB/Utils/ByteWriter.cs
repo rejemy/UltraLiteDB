@@ -310,10 +310,22 @@ namespace UltraLiteDB
 		/// </summary>
 		internal int BeginElement(byte[] keyCString)
 		{
-			this.EnsureCapacity(1 + keyCString.Length);
+			var length = keyCString.Length;
+			this.EnsureCapacity(1 + length);
 			var typePos = _pos;
-			new ReadOnlySpan<byte>(keyCString).CopyTo(new Span<byte>(_buffer, _pos + 1, keyCString.Length));
-			_pos += 1 + keyCString.Length;
+
+			// field names are short: a byte loop beats a memcpy call (notably under IL2CPP)
+			if (length <= 32)
+			{
+				var p = _pos + 1;
+				for (var i = 0; i < length; i++) _buffer[p + i] = keyCString[i];
+			}
+			else
+			{
+				System.Buffer.BlockCopy(keyCString, 0, _buffer, _pos + 1, length);
+			}
+
+			_pos += 1 + length;
 			return typePos;
 		}
 
@@ -371,8 +383,31 @@ namespace UltraLiteDB
 		internal void WriteCString(string value)
 		{
 			this.EnsureCapacity(Utf8Capacity(value) + 1);
-			_pos += Encoding.UTF8.GetBytes(value, 0, value.Length, _buffer, _pos);
+			_pos += this.EncodeUtf8(value, _pos);
 			_buffer[_pos++] = 0x00;
+		}
+
+		/// <summary>
+		/// Encodes <paramref name="value"/> as UTF-8 at <paramref name="offset"/> (capacity already ensured) and
+		/// returns the byte count. ASCII, the common case for keys and game strings, is copied directly; the
+		/// encoder only runs from the first non-ASCII character on (the ASCII prefix can't end in a surrogate).
+		/// </summary>
+		private int EncodeUtf8(string value, int offset)
+		{
+			var length = value.Length;
+			var buffer = _buffer;
+			var i = 0;
+
+			for (; i < length; i++)
+			{
+				var c = value[i];
+				if (c >= 0x80) break;
+				buffer[offset + i] = (byte)c;
+			}
+
+			if (i == length) return length;
+
+			return i + Encoding.UTF8.GetBytes(value, i, length - i, buffer, offset + i);
 		}
 
 		/// <summary>
@@ -403,7 +438,7 @@ namespace UltraLiteDB
 		internal void WriteBsonString(string value)
 		{
 			this.EnsureCapacity(4 + Utf8Capacity(value) + 1);
-			var count = Encoding.UTF8.GetBytes(value, 0, value.Length, _buffer, _pos + 4);
+			var count = this.EncodeUtf8(value, _pos + 4);
 			BinaryPrimitives.WriteInt32LittleEndian(new Span<byte>(_buffer, _pos, 4), count + 1);
 			_pos += 4 + count;
 			_buffer[_pos++] = 0x00;

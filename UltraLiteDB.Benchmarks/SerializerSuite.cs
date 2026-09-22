@@ -1,24 +1,32 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.IO;
+#if NET5_0_OR_GREATER
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
+#endif
 
 namespace UltraLiteDB.Benchmarks
 {
 	/// <summary>
 	/// End-to-end serializer benchmarks: the direct POCO paths (BsonMapper.DirectSerialize/DirectDeserialize),
 	/// the BsonDocument path for reference, and System.Text.Json as a mainstream reference (JIT only).
+	/// Also compiled into the Unity IL2CPP benchmark (UnityTest/), so .NET 5+ only APIs stay behind NET5_0_OR_GREATER.
 	/// </summary>
 	public static class SerializerSuite
 	{
 		// NativeAOT trims constructors that are only reached through reflection (Activator.CreateInstance),
 		// exactly like Unity's managed code stripping (link.xml). Every collection type the mapper has to
-		// instantiate on deserialize must be listed here. Add entries when adding models.
+		// instantiate on deserialize must be listed here. Add entries when adding models. (Unity IL2CPP keeps
+		// these without help at the default Minimal stripping level, since the models construct them directly.)
+#if NET5_0_OR_GREATER
 		[DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(List<Item>))]
 		[DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(List<FItem>))]
 		[DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(List<string>))]
 		[DynamicDependency(DynamicallyAccessedMemberTypes.PublicParameterlessConstructor, typeof(Dictionary<string, int>))]
+#endif
 		public static void Run(double seconds, Func<string, bool> include)
 		{
 			var mapper = new BsonMapper();
@@ -48,11 +56,20 @@ namespace UltraLiteDB.Benchmarks
 			Bench("document: ToDocument + BsonWriter", () => BsonWriter.Serialize(mapper.ToDocument(player)));
 			Bench("document: BsonReader + ToObject", () => mapper.ToObject<Player>(BsonReader.Deserialize(bytes)));
 
+			// the two halves of the document path, which is what typed database collections run: insert/update is
+			// ToDocument + BsonWriter.Serialize, reads are BsonReader.Deserialize (+ ToObject for typed collections)
+			var document = mapper.ToDocument(player);
+			Bench("document: BsonWriter.Serialize(doc) only", () => BsonWriter.Serialize(document));
+			Bench("document: BsonReader.Deserialize only", () => BsonReader.Deserialize(bytes));
+			Bench("document: mapper ToDocument only", () => mapper.ToDocument(player));
+			Bench("document: mapper ToObject(doc) only", () => mapper.ToObject<Player>(document));
+
 			Console.WriteLine();
 			Console.WriteLine("Fields model (IncludeFields = true):");
 			Bench("serialize: SerializeToBytes<T> (fields)", () => fieldMapper.SerializeToBytes(fieldPlayer));
 			Bench("deserialize: DeserializeFromBytes<T> (fields)", () => fieldMapper.DeserializeFromBytes<FPlayer>(fieldBytes));
 
+#if NET5_0_OR_GREATER
 			Console.WriteLine();
 			Console.WriteLine("System.Text.Json reference (properties model, UTF-8):");
 
@@ -68,6 +85,7 @@ namespace UltraLiteDB.Benchmarks
 			{
 				Console.WriteLine("  (skipped: reflection-based System.Text.Json is disabled under NativeAOT)");
 			}
+#endif
 
 			void Bench(string name, Action action)
 			{

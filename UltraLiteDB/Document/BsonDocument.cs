@@ -342,6 +342,12 @@ namespace UltraLiteDB
 
 		private int _length = 0;
 
+		/// <summary>
+		/// Records this document's serialized length, as <see cref="GetBytesCount(bool)"/> with recalc would; used
+		/// by the single-pass writer, which learns the length by writing.
+		/// </summary>
+		internal void SetBytesCount(int length) => _length = length;
+
 		public override int GetBytesCount(bool recalc)
 		{
 			if (recalc == false && _length > 0) return _length;

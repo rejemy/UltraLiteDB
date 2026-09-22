@@ -285,28 +285,28 @@ namespace UltraLiteDB
 		}
 
 		/// <summary>
-		/// Reads a null-terminated C-string without decoding it, returning a span over its UTF-8 bytes
-		/// (terminator excluded). The span is only valid until the underlying buffer is changed.
+		/// Gets the underlying buffer, for zero-copy reads by the BSON reader.
 		/// </summary>
-		internal ReadOnlySpan<byte> ReadCStringSpan()
-		{
-			var span = new ReadOnlySpan<byte>(_buffer, _pos, _length - _pos);
-			var length = span.IndexOf((byte)0x00);
-			if (length < 0) length = span.Length; // unterminated (corrupt) data: consume the rest
+		internal byte[] Buffer { get { return _buffer; } }
 
-			_pos += length + 1;
-			return span.Slice(0, length);
-		}
+		// The C-string helpers below use plain loops on purpose: generic span helpers (IndexOf, SequenceEqual)
+		// do typeof() checks that cost a locked hash lookup under IL2CPP, far more than scanning a short key.
 
 		/// <summary>
-		/// Returns a span over the next <paramref name="count"/> bytes and advances past them.
-		/// The span is only valid until the underlying buffer is changed.
+		/// Reads a null-terminated C-string without decoding it: returns the offset of its first byte in
+		/// <see cref="Buffer"/> and its <paramref name="length"/> (terminator excluded).
 		/// </summary>
-		internal ReadOnlySpan<byte> ReadSpan(int count)
+		internal int ReadCStringRange(out int length)
 		{
-			var span = new ReadOnlySpan<byte>(_buffer, _pos, count);
-			_pos += count;
-			return span;
+			var start = _pos;
+			var end = start;
+
+			// an unterminated (corrupt) string consumes the rest of the buffer
+			while (end < _length && _buffer[end] != 0x00) end++;
+
+			length = end - start;
+			_pos = end + 1;
+			return start;
 		}
 
 		/// <summary>
@@ -314,8 +314,9 @@ namespace UltraLiteDB
 		/// </summary>
 		internal void SkipCString()
 		{
-			var length = new ReadOnlySpan<byte>(_buffer, _pos, _length - _pos).IndexOf((byte)0x00);
-			_pos = length < 0 ? _length + 1 : _pos + length + 1;
+			var end = _pos;
+			while (end < _length && _buffer[end] != 0x00) end++;
+			_pos = end + 1;
 		}
 
 		internal PageAddress ReadPageAddress()

@@ -45,7 +45,7 @@ namespace UltraLiteDB
 
 			var writer = DirectBuffers.RentWriter();
 
-			DirectBsonWriter.WriteObjectDirect(writer, this, type, entity, null, 0);
+			DirectBsonWriter.WriteObjectDirect(writer, this, type, entity, null, null, 0);
 
 			// Copy out exactly the bytes written; the scratch buffer is reused by the next call
 			var result = new byte[writer.Position];
@@ -69,12 +69,11 @@ namespace UltraLiteDB
 			// If already a BsonDocument, use existing path
 			if (entity is BsonDocument doc)
 			{
-				writer.EnsureCapacity(doc.GetBytesCount(true));
-				BsonWriter.WriteDocument(writer, doc);
+				BsonWriter.WriteDocumentDirect(writer, doc);
 				return;
 			}
 
-			DirectBsonWriter.WriteObjectDirect(writer, this, type, entity, null, 0);
+			DirectBsonWriter.WriteObjectDirect(writer, this, type, entity, null, null, 0);
 		}
 
 		/// <summary>

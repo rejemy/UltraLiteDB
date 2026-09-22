@@ -1,3 +1,5 @@
+#nullable enable
+
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -16,6 +18,13 @@ namespace UltraLiteDB.Benchmarks
 		private const int BATCH = 16;
 
 		/// <summary>
+		/// Optional replacement for the per-thread allocation counter, for runtimes that don't implement
+		/// <see cref="GC.GetAllocatedBytesForCurrentThread"/>. Called once per benchmark after warmup with the
+		/// benchmark action; returns bytes allocated per call. The Unity runner installs one if needed.
+		/// </summary>
+		public static Func<Action, double>? AllocationProbe;
+
+		/// <summary>
 		/// Runs <paramref name="action"/> for about <paramref name="seconds"/> (plus warmup) and prints
 		/// time and allocation per call. <paramref name="opsPerCall"/> divides both, for calls that do
 		/// several operations (e.g. one call touching every member of an object).
@@ -26,6 +35,8 @@ namespace UltraLiteDB.Benchmarks
 			var warm = Stopwatch.StartNew();
 			while (warm.Elapsed.TotalSeconds < Math.Min(0.5, seconds / 2)) action();
 
+			var probedBytes = AllocationProbe?.Invoke(action) / opsPerCall;
+
 			var results = new List<(double ns, double bytes)>();
 
 			for (var round = 0; round < ROUNDS; round++)
@@ -35,7 +46,7 @@ namespace UltraLiteDB.Benchmarks
 				GC.Collect();
 
 				long calls = 0;
-				var before = GC.GetAllocatedBytesForCurrentThread();
+				var before = probedBytes.HasValue ? 0 : GC.GetAllocatedBytesForCurrentThread();
 				var sw = Stopwatch.StartNew();
 
 				while (sw.Elapsed.TotalSeconds < seconds / ROUNDS)
@@ -45,10 +56,10 @@ namespace UltraLiteDB.Benchmarks
 				}
 
 				sw.Stop();
-				var allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+				var allocated = probedBytes.HasValue ? 0 : GC.GetAllocatedBytesForCurrentThread() - before;
 				var ops = (double)calls * opsPerCall;
 
-				results.Add((sw.Elapsed.TotalMilliseconds * 1e6 / ops, allocated / ops));
+				results.Add((sw.Elapsed.TotalMilliseconds * 1e6 / ops, probedBytes ?? allocated / ops));
 			}
 
 			var median = results.OrderBy(r => r.ns).ElementAt(ROUNDS / 2);

@@ -75,12 +75,63 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Delegate that reads this member's value from an entity instance.
 		/// </summary>
-		public GenericGetter? Getter { get; set; }
+		public GenericGetter? Getter
+		{
+			get { return _getter; }
+			set { _getter = value; _primitiveGetter = null; _primitiveGetterResolved = false; }
+		}
 
 		/// <summary>
 		/// Delegate that writes a value to this member on an entity instance.
 		/// </summary>
-		public GenericSetter? Setter { get; set; }
+		public GenericSetter? Setter
+		{
+			get { return _setter; }
+			set { _setter = value; _primitiveSetter = null; _primitiveSetterResolved = false; }
+		}
+
+		private GenericGetter? _getter;
+		private GenericSetter? _setter;
+
+		private TypedAccessor? _primitiveGetter;
+		private TypedAccessor? _primitiveSetter;
+		private volatile bool _primitiveGetterResolved;
+		private volatile bool _primitiveSetterResolved;
+
+		/// <summary>
+		/// The typed accessor behind <see cref="Getter"/> when the member is a primitive the direct serializer can
+		/// write unboxed; otherwise null. Resolved once (Delegate.Target isn't free on every runtime) and reset
+		/// whenever <see cref="Getter"/> is replaced.
+		/// </summary>
+		internal TypedAccessor? PrimitiveGetter
+		{
+			get
+			{
+				if (!_primitiveGetterResolved)
+				{
+					_primitiveGetter = _getter?.Target is TypedAccessor typed && typed.Primitive != DirectKind.Object ? typed : null;
+					_primitiveGetterResolved = true;
+				}
+				return _primitiveGetter;
+			}
+		}
+
+		/// <summary>
+		/// The typed accessor behind <see cref="Setter"/> when the member is a primitive the direct deserializer can
+		/// set unboxed; otherwise null. See <see cref="PrimitiveGetter"/>.
+		/// </summary>
+		internal TypedAccessor? PrimitiveSetter
+		{
+			get
+			{
+				if (!_primitiveSetterResolved)
+				{
+					_primitiveSetter = _setter?.Target is TypedAccessor typed && typed.Primitive != DirectKind.Object ? typed : null;
+					_primitiveSetterResolved = true;
+				}
+				return _primitiveSetter;
+			}
+		}
 
 		/// <summary>
 		/// Optional custom serialization function. When set, bypasses the default serialization logic for this member.

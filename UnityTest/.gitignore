@@ -1,0 +1,27 @@
+# Unity-generated folders and files
+/[Ll]ibrary/
+/[Tt]emp/
+/[Oo]bj/
+/[Bb]uild/
+/[Bb]uilds/
+/[Ll]ogs/
+/[Uu]ser[Ss]ettings/
+/[Mm]emoryCaptures/
+/[Rr]ecordings/
+*.csproj
+*.sln
+*.slnx
+*.pidb.meta
+*.pdb.meta
+*.mdb.meta
+
+# The repo root .gitignore excludes these for the .NET projects, but a Unity project must keep them:
+# every asset's .meta file (it holds the asset GUID) and Packages/ (manifest.json, packages-lock.json)
+!*.meta
+!/Packages/
+
+# Copied in by UltraLiteDB.Benchmarks/run-il2cpp.sh (the library DLL and the benchmark sources)
+/Assets/Plugins/UltraLiteDB/
+/Assets/Plugins/UltraLiteDB.meta
+/Assets/UltraLiteBench/
+/Assets/UltraLiteBench.meta

@@ -13,14 +13,22 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Serializes a <see cref="BsonDocument"/> into a new byte array.
 		/// </summary>
+		/// <remarks>
+		/// Single pass: the document is written into a reusable per-thread buffer with its length prefixes
+		/// back-filled, then copied out, instead of sizing the whole tree first. Every document and array written
+		/// gets its cached length updated, exactly as the sizing pass (<c>GetBytesCount(true)</c>) used to leave it.
+		/// </remarks>
 		public static byte[] Serialize(BsonDocument doc)
 		{
-			var count = doc.GetBytesCount(true);
-			var writer = new ByteWriter(count);
+			var writer = DirectBuffers.RentWriter();
 
-			WriteDocument(writer, doc);
+			WriteDocumentDirect(writer, doc);
 
-			return writer.Buffer;
+			var result = new byte[writer.Position];
+			System.Buffer.BlockCopy(writer.Buffer, 0, result, 0, writer.Position);
+
+			DirectBuffers.ReturnWriter(writer);
+			return result;
 		}
 
 		/// <summary>
@@ -40,13 +48,17 @@ namespace UltraLiteDB
 		/// <summary>
 		/// Writes a BSON document (length prefix + elements + 0x00 terminator) to the writer.
 		/// </summary>
+		/// <remarks>
+		/// Forward-only (the length prefix comes from <see cref="BsonValue.GetBytesCount(bool)"/>), so it works on
+		/// any writer: non-seekable streams, and fixed buffers such as index pages that must not grow.
+		/// </remarks>
 		public static void WriteDocument(IByteWriter writer, BsonDocument doc)
 		{
 			writer.Write(doc.GetBytesCount(false));
 
-			foreach (var key in doc.Keys)
+			foreach (var element in doc.RawValue)
 			{
-				WriteElement(writer, key, doc[key] ?? BsonValue.Null);
+				WriteElement(writer, element.Key, element.Value ?? BsonValue.Null);
 			}
 
 			writer.Write((byte)0x00);
@@ -57,14 +69,71 @@ namespace UltraLiteDB
 		/// </summary>
 		public static void WriteArray(IByteWriter writer, BsonArray array)
 		{
-			writer.Write(array.GetBytesCount(false));
+			WriteArray(writer, array, array.GetBytesCount(false));
+		}
 
-			for (var i = 0; i < array.Count; i++)
+		private static void WriteArray(IByteWriter writer, BsonArray array, int length)
+		{
+			writer.Write(length);
+
+			var items = array.RawValue;
+
+			for (var i = 0; i < items.Count; i++)
 			{
-				WriteElement(writer, i.ToString(), array[i] ?? BsonValue.Null);
+				WriteElement(writer, i.ToString(), items[i] ?? BsonValue.Null);
 			}
 
 			writer.Write((byte)0x00);
+		}
+
+		/// <summary>
+		/// Writes a BSON document into a growable <see cref="ByteWriter"/> in one pass: the length prefix is
+		/// reserved and back-filled, and the document's cached length is updated to match. Keys and strings are
+		/// encoded straight into the buffer.
+		/// </summary>
+		internal static void WriteDocumentDirect(ByteWriter writer, BsonDocument doc)
+		{
+			var start = writer.Position;
+			writer.EnsureCapacity(4);
+			writer.Skip(4);
+
+			foreach (var element in doc.RawValue)
+			{
+				var typePos = writer.BeginElement(element.Key);
+				writer.SetByte(typePos, DirectBsonWriter.WriteBsonValue(writer, element.Value ?? BsonValue.Null));
+			}
+
+			writer.EnsureCapacity(1);
+			writer.Write((byte)0x00);
+
+			var length = writer.Position - start;
+			writer.SetInt32(start, length);
+			doc.SetBytesCount(length);
+		}
+
+		/// <summary>
+		/// Writes a BSON array into a growable <see cref="ByteWriter"/> in one pass. See <see cref="WriteDocumentDirect"/>.
+		/// </summary>
+		internal static void WriteArrayDirect(ByteWriter writer, BsonArray array)
+		{
+			var start = writer.Position;
+			writer.EnsureCapacity(4);
+			writer.Skip(4);
+
+			var items = array.RawValue;
+
+			for (var i = 0; i < items.Count; i++)
+			{
+				var typePos = writer.BeginElement(i);
+				writer.SetByte(typePos, DirectBsonWriter.WriteBsonValue(writer, items[i] ?? BsonValue.Null));
+			}
+
+			writer.EnsureCapacity(1);
+			writer.Write((byte)0x00);
+
+			var length = writer.Position - start;
+			writer.SetInt32(start, length);
+			array.SetBytesCount(length);
 		}
 
 		private static void WriteElement(IByteWriter writer, string key, BsonValue value)
@@ -93,7 +162,9 @@ namespace UltraLiteDB
 				case BsonType.Array:
 					writer.Write((byte)0x04);
 					WriteCString(writer, key);
-					WriteArray(writer, new BsonArray((List<BsonValue>)value.RawValue));
+					// a nested array's length is always recalculated (never a possibly stale cached value)
+					var array = value as BsonArray ?? new BsonArray((List<BsonValue>)value.RawValue);
+					WriteArray(writer, array, array.GetBytesCount(true));
 					break;
 
 				case BsonType.Binary:

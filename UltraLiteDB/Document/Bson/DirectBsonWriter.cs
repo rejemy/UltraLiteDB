@@ -22,17 +22,29 @@ namespace UltraLiteDB
 		private const int MAX_DEPTH = 20;
 
 		private static readonly byte[] _typeIdKey = { (byte)'_', (byte)'t', 0x00 };
+
+		// exact-type handles for the unboxed collection paths (cached: typeof/GetType are locked lookups under IL2CPP)
+		private static readonly RuntimeTypeHandle _intArray = typeof(int[]).TypeHandle;
+		private static readonly RuntimeTypeHandle _intList = typeof(List<int>).TypeHandle;
+		private static readonly RuntimeTypeHandle _floatArray = typeof(float[]).TypeHandle;
+		private static readonly RuntimeTypeHandle _floatList = typeof(List<float>).TypeHandle;
+		private static readonly RuntimeTypeHandle _doubleArray = typeof(double[]).TypeHandle;
+		private static readonly RuntimeTypeHandle _doubleList = typeof(List<double>).TypeHandle;
+		private static readonly RuntimeTypeHandle _longArray = typeof(long[]).TypeHandle;
+		private static readonly RuntimeTypeHandle _longList = typeof(List<long>).TypeHandle;
+		private static readonly RuntimeTypeHandle _boolArray = typeof(bool[]).TypeHandle;
+		private static readonly RuntimeTypeHandle _boolList = typeof(List<bool>).TypeHandle;
 		private static readonly byte[] _typeNameKey = { (byte)'_', (byte)'t', (byte)'y', (byte)'p', (byte)'e', 0x00 };
 
 		/// <summary>
-		/// Write a C# object as a BSON document directly to the ByteWriter. <c>entity</c> is the entity
-		/// mapper for <c>obj.GetType()</c> when the caller already has it, otherwise null.
+		/// Write a C# object as a BSON document directly to the ByteWriter. <c>runtimeType</c> and <c>entity</c>
+		/// are <c>obj.GetType()</c> and its entity mapper when the caller already has them, otherwise null.
 		/// </summary>
-		public static void WriteObjectDirect(ByteWriter writer, BsonMapper mapper, Type declaredType, object obj, EntityMapper? entity, int depth)
+		public static void WriteObjectDirect(ByteWriter writer, BsonMapper mapper, Type declaredType, object obj, Type? runtimeType, EntityMapper? entity, int depth)
 		{
 			if (++depth > MAX_DEPTH) throw UltraLiteException.DocumentMaxDepth(MAX_DEPTH, declaredType);
 
-			var t = obj.GetType();
+			var t = runtimeType ?? obj.GetType();
 			entity ??= mapper.GetEntityMapper(t);
 
 			// Record position for length backfill
@@ -79,6 +91,17 @@ namespace UltraLiteDB
 				var key = member.FieldNameCString;
 				if (key == null) continue;
 
+				// primitive property with a typed accessor: read and write it without boxing. Built-in types take
+				// precedence over custom serializers when writing, so this matches the general path exactly.
+				var typed = member.PrimitiveGetter;
+
+				if (typed != null && member.Serialize == null)
+				{
+					var primitivePos = writer.BeginElement(key);
+					writer.SetByte(primitivePos, WritePrimitive(writer, typed, obj));
+					continue;
+				}
+
 				var value = getter(obj);
 
 				if (value == null && !mapper.SerializeNullValues && member.FieldName != "_id") continue;
@@ -98,7 +121,7 @@ namespace UltraLiteDB
 				else
 				{
 					var cached = member.WriteInfo;
-					var info = DirectWriteInfo.Get(mapper, cached, member.DataType, value.GetType());
+					var info = DirectWriteInfo.Get(mapper, cached, member.DataType, value);
 					if (info != cached) Volatile.Write(ref member.WriteInfo, info);
 
 					bsonType = WriteValue(writer, mapper, info, value, depth);
@@ -248,8 +271,58 @@ namespace UltraLiteDB
 				default:
 					// Complex object
 					info.Entity ??= mapper.GetEntityMapper(info.RuntimeType);
-					WriteObjectDirect(writer, mapper, info.DeclaredType, value, info.Entity, depth);
+					WriteObjectDirect(writer, mapper, info.DeclaredType, value, info.RuntimeType, info.Entity, depth);
 					return 0x03;
+			}
+		}
+
+		/// <summary>
+		/// Writes a primitive property's value through its typed accessor (no boxing) and returns its BSON type byte.
+		/// Same bytes as <see cref="WriteValue"/> for the corresponding <see cref="DirectKind"/>.
+		/// </summary>
+		private static byte WritePrimitive(ByteWriter writer, TypedAccessor typed, object obj)
+		{
+			switch (typed.Primitive)
+			{
+				case DirectKind.Int32:
+					writer.EnsureCapacity(4);
+					writer.Write(typed.GetInt32(obj));
+					return 0x10;
+
+				case DirectKind.Int64:
+					writer.EnsureCapacity(8);
+					writer.Write(typed.GetInt64(obj));
+					return 0x12;
+
+				case DirectKind.Double:
+					writer.EnsureCapacity(8);
+					writer.Write(typed.GetDouble(obj));
+					return 0x01;
+
+				case DirectKind.Single:
+					writer.EnsureCapacity(8);
+					writer.Write((Double)typed.GetSingle(obj));
+					return 0x01;
+
+				case DirectKind.Boolean:
+					writer.EnsureCapacity(1);
+					writer.Write((byte)(typed.GetBoolean(obj) ? 0x01 : 0x00));
+					return 0x08;
+
+				case DirectKind.DateTime:
+					writer.EnsureCapacity(8);
+					writer.Write(ToUnixMilliseconds(typed.GetDateTime(obj)));
+					return 0x09;
+
+				case DirectKind.Guid:
+					writer.EnsureCapacity(4 + 1 + 16);
+					writer.Write(16);
+					writer.Write((byte)0x04); // UUID subtype
+					writer.Write(typed.GetGuid(obj));
+					return 0x05;
+
+				default:
+					throw new InvalidOperationException($"Not a typed primitive: {typed.Primitive}");
 			}
 		}
 
@@ -261,7 +334,7 @@ namespace UltraLiteDB
 			if (item == null) return 0x0A;
 
 			var cached = collection.ItemInfo;
-			var info = DirectWriteInfo.Get(mapper, cached, collection.ItemType!, item.GetType());
+			var info = DirectWriteInfo.Get(mapper, cached, collection.ItemType!, item);
 			if (info != cached) Volatile.Write(ref collection.ItemInfo, info);
 
 			return WriteValue(writer, mapper, info, item, depth);
@@ -312,54 +385,55 @@ namespace UltraLiteDB
 		/// </summary>
 		private static bool TryWritePrimitiveArray(ByteWriter writer, IEnumerable items)
 		{
-			var type = items.GetType();
+			// exact types only: the CLR treats uint[] and int-based enum arrays as int[] for `is` checks
+			var type = Type.GetTypeHandle(items);
 
-			if (type == typeof(int[]))
+			if (type.Equals(_intArray))
 			{
 				var a = (int[])items;
 				for (var i = 0; i < a.Length; i++) WriteInt32Item(writer, i, a[i]);
 			}
-			else if (type == typeof(List<int>))
+			else if (type.Equals(_intList))
 			{
 				var l = (List<int>)items;
 				for (var i = 0; i < l.Count; i++) WriteInt32Item(writer, i, l[i]);
 			}
-			else if (type == typeof(float[]))
+			else if (type.Equals(_floatArray))
 			{
 				var a = (float[])items;
 				for (var i = 0; i < a.Length; i++) WriteDoubleItem(writer, i, a[i]);
 			}
-			else if (type == typeof(List<float>))
+			else if (type.Equals(_floatList))
 			{
 				var l = (List<float>)items;
 				for (var i = 0; i < l.Count; i++) WriteDoubleItem(writer, i, l[i]);
 			}
-			else if (type == typeof(double[]))
+			else if (type.Equals(_doubleArray))
 			{
 				var a = (double[])items;
 				for (var i = 0; i < a.Length; i++) WriteDoubleItem(writer, i, a[i]);
 			}
-			else if (type == typeof(List<double>))
+			else if (type.Equals(_doubleList))
 			{
 				var l = (List<double>)items;
 				for (var i = 0; i < l.Count; i++) WriteDoubleItem(writer, i, l[i]);
 			}
-			else if (type == typeof(long[]))
+			else if (type.Equals(_longArray))
 			{
 				var a = (long[])items;
 				for (var i = 0; i < a.Length; i++) WriteInt64Item(writer, i, a[i]);
 			}
-			else if (type == typeof(List<long>))
+			else if (type.Equals(_longList))
 			{
 				var l = (List<long>)items;
 				for (var i = 0; i < l.Count; i++) WriteInt64Item(writer, i, l[i]);
 			}
-			else if (type == typeof(bool[]))
+			else if (type.Equals(_boolArray))
 			{
 				var a = (bool[])items;
 				for (var i = 0; i < a.Length; i++) WriteBooleanItem(writer, i, a[i]);
 			}
-			else if (type == typeof(List<bool>))
+			else if (type.Equals(_boolList))
 			{
 				var l = (List<bool>)items;
 				for (var i = 0; i < l.Count; i++) WriteBooleanItem(writer, i, l[i]);
@@ -444,9 +518,10 @@ namespace UltraLiteDB
 
 		/// <summary>
 		/// Writes a BsonValue's bytes using the BsonWriter format and returns its BSON type byte.
-		/// Used as fallback for custom serializers and BsonValue-typed properties.
+		/// Used for custom serializers and BsonValue-typed properties, and by <see cref="BsonWriter"/>'s
+		/// single-pass document writer.
 		/// </summary>
-		private static byte WriteBsonValue(ByteWriter writer, BsonValue value)
+		internal static byte WriteBsonValue(ByteWriter writer, BsonValue value)
 		{
 			switch (value.Type)
 			{
@@ -460,15 +535,11 @@ namespace UltraLiteDB
 					return 0x02;
 
 				case BsonType.Document:
-					var doc = (BsonDocument)value;
-					writer.EnsureCapacity(doc.GetBytesCount(true));
-					BsonWriter.WriteDocument(writer, doc);
+					BsonWriter.WriteDocumentDirect(writer, (BsonDocument)value);
 					return 0x03;
 
 				case BsonType.Array:
-					var array = value as BsonArray ?? new BsonArray((List<BsonValue>)value.RawValue);
-					writer.EnsureCapacity(array.GetBytesCount(true));
-					BsonWriter.WriteArray(writer, array);
+					BsonWriter.WriteArrayDirect(writer, value as BsonArray ?? new BsonArray((List<BsonValue>)value.RawValue));
 					return 0x04;
 
 				case BsonType.Binary:

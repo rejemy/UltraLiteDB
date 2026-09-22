@@ -19,6 +19,10 @@ namespace UltraLiteDB
 	/// </remarks>
 	internal static class DirectBsonReader
 	{
+		// cached: typeof() in a hot loop is a locked hash lookup under IL2CPP
+		private static readonly Type _objectType = typeof(object);
+		private static readonly Type _objectDictionaryType = typeof(Dictionary<string, object>);
+
 		/// <summary>
 		/// Read a BSON document from bytes directly into a C# object. <c>info</c> is the cached read info
 		/// for <c>type</c> when the caller already has it, otherwise null.
@@ -35,17 +39,19 @@ namespace UltraLiteDB
 			var nextMember = 0;
 			bool typeResolved = false;
 
+			var buffer = reader.Buffer;
+
 			while (reader.Position < end)
 			{
 				var bsonType = reader.ReadByte();
-				var name = reader.ReadCStringSpan();
+				var nameStart = reader.ReadCStringRange(out var nameLength);
 
 				// Check for type discriminator fields before we create the object
 				if (!typeResolved)
 				{
 					typeResolved = true;
 
-					if (IsKey(name, (byte)'_', (byte)'t'))
+					if (nameLength == 2 && buffer[nameStart] == '_' && buffer[nameStart + 1] == 't')
 					{
 						var typeIdValue = ReadBsonValue(reader, bsonType);
 						if (mapper.CustomIdToType.TryGetValue(typeIdValue, out Type mappedType))
@@ -54,7 +60,7 @@ namespace UltraLiteDB
 						}
 						continue;
 					}
-					else if (IsTypeNameKey(name))
+					else if (IsTypeNameKey(buffer, nameStart, nameLength))
 					{
 						var typeNameValue = ReadBsonValue(reader, bsonType);
 						var resolved = Type.GetType(typeNameValue.AsString);
@@ -68,9 +74,9 @@ namespace UltraLiteDB
 				if (obj == null)
 				{
 					// Handle special case: typeof(object) -> Dictionary<string, object>
-					if (resolvedType == typeof(object))
+					if (resolvedType == _objectType)
 					{
-						resolvedType = typeof(Dictionary<string, object>);
+						resolvedType = _objectDictionaryType;
 					}
 
 					var typeInfo = info != null && info.Type == resolvedType ? info : mapper.GetDirectReadInfo(resolvedType);
@@ -78,7 +84,7 @@ namespace UltraLiteDB
 					// Check if we should deserialize as a dictionary
 					if (typeInfo.IsGenericDictionary)
 					{
-						return ReadDictionaryFromPosition(reader, mapper, typeInfo, bsonType, Encoding.UTF8.GetString(name), end);
+						return ReadDictionaryFromPosition(reader, mapper, typeInfo, bsonType, Encoding.UTF8.GetString(buffer, nameStart, nameLength), end);
 					}
 
 					obj = mapper.TypeInstantiator(resolvedType);
@@ -87,11 +93,11 @@ namespace UltraLiteDB
 				}
 
 				// Look up the member for this field (exact bytes first, then the case-insensitive lookup)
-				var member = FindMember(members!, name, ref nextMember);
+				var member = FindMember(members!, buffer, nameStart, nameLength, ref nextMember);
 
 				if (member == null)
 				{
-					entity!.FieldLookup.TryGetValue(Encoding.UTF8.GetString(name), out member);
+					entity!.FieldLookup.TryGetValue(Encoding.UTF8.GetString(buffer, nameStart, nameLength), out member);
 				}
 
 				if (member != null && member.Setter != null)
@@ -107,6 +113,16 @@ namespace UltraLiteDB
 						var cached = member.ReadInfo;
 						var memberInfo = DirectReadInfo.Get(mapper, cached, member.DataType);
 						if (memberInfo != cached) Volatile.Write(ref member.ReadInfo, memberInfo);
+
+						// primitive property with a typed accessor, stored as its natural BSON type: read and set it
+						// without boxing. Anything else (a custom deserializer, a stored type needing conversion) takes
+						// the general path.
+						var typed = member.PrimitiveSetter;
+
+						if (typed != null && memberInfo.Custom == null && TryReadPrimitive(reader, bsonType, typed, obj))
+						{
+							continue;
+						}
 
 						var value = ReadValueDirect(reader, mapper, bsonType, memberInfo);
 						if (value != null)
@@ -127,9 +143,9 @@ namespace UltraLiteDB
 			// If no fields were read, still create the object
 			if (obj == null)
 			{
-				if (resolvedType == typeof(object))
+				if (resolvedType == _objectType)
 				{
-					resolvedType = typeof(Dictionary<string, object>);
+					resolvedType = _objectDictionaryType;
 				}
 				obj = mapper.TypeInstantiator(resolvedType);
 			}
@@ -138,10 +154,11 @@ namespace UltraLiteDB
 		}
 
 		/// <summary>
-		/// Finds the member whose field name bytes equal <paramref name="name"/>, starting the search at
-		/// <paramref name="next"/> (the member after the previous match) so in-order documents match on the first compare.
+		/// Finds the member whose field name equals the <paramref name="length"/> bytes of <paramref name="buffer"/> at
+		/// <paramref name="start"/>, starting the search at <paramref name="next"/> (the member after the previous
+		/// match) so in-order documents match on the first compare.
 		/// </summary>
-		private static MemberMapper? FindMember(List<MemberMapper> members, ReadOnlySpan<byte> name, ref int next)
+		private static MemberMapper? FindMember(List<MemberMapper> members, byte[] buffer, int start, int length, ref int next)
 		{
 			var count = members.Count;
 
@@ -153,7 +170,12 @@ namespace UltraLiteDB
 				var key = members[idx].FieldNameCString;
 
 				// key includes the null terminator
-				if (key != null && key.Length == name.Length + 1 && name.SequenceEqual(new ReadOnlySpan<byte>(key, 0, name.Length)))
+				if (key == null || key.Length != length + 1) continue;
+
+				var j = 0;
+				while (j < length && key[j] == buffer[start + j]) j++;
+
+				if (j == length)
 				{
 					next = idx + 1;
 					return members[idx];
@@ -163,14 +185,64 @@ namespace UltraLiteDB
 			return null;
 		}
 
-		private static bool IsKey(ReadOnlySpan<byte> name, byte c0, byte c1)
+		/// <summary>
+		/// Reads a primitive property's value and sets it through its typed accessor (no boxing), when the stored
+		/// BSON type is the one the property type maps to. Returns false, having consumed nothing, otherwise.
+		/// </summary>
+		private static bool TryReadPrimitive(ByteReader reader, byte bsonType, TypedAccessor typed, object obj)
 		{
-			return name.Length == 2 && name[0] == c0 && name[1] == c1;
+			switch (typed.Primitive)
+			{
+				case DirectKind.Int32:
+					if (bsonType != 0x10) return false;
+					typed.SetInt32(obj, reader.ReadInt32());
+					return true;
+
+				case DirectKind.Int64:
+					if (bsonType != 0x12) return false;
+					typed.SetInt64(obj, reader.ReadInt64());
+					return true;
+
+				case DirectKind.Double:
+					if (bsonType != 0x01) return false;
+					typed.SetDouble(obj, reader.ReadDouble());
+					return true;
+
+				case DirectKind.Single:
+					if (bsonType != 0x01) return false;
+					typed.SetSingle(obj, (Single)reader.ReadDouble());
+					return true;
+
+				case DirectKind.Boolean:
+					if (bsonType != 0x08) return false;
+					typed.SetBoolean(obj, reader.ReadBoolean());
+					return true;
+
+				case DirectKind.DateTime:
+					if (bsonType != 0x09) return false;
+					typed.SetDateTime(obj, ReadDateTime(reader));
+					return true;
+
+				case DirectKind.Guid:
+					if (bsonType != 0x05) return false;
+					var start = reader.Position;
+					if (reader.ReadInt32() != 16 || reader.ReadByte() != 0x04)
+					{
+						reader.Position = start;
+						return false;
+					}
+					typed.SetGuid(obj, reader.ReadGuid());
+					return true;
+
+				default:
+					return false;
+			}
 		}
 
-		private static bool IsTypeNameKey(ReadOnlySpan<byte> name)
+		private static bool IsTypeNameKey(byte[] buffer, int start, int length)
 		{
-			return name.Length == 5 && name[0] == '_' && name[1] == 't' && name[2] == 'y' && name[3] == 'p' && name[4] == 'e';
+			return length == 5 && buffer[start] == '_' && buffer[start + 1] == 't' && buffer[start + 2] == 'y' &&
+				buffer[start + 3] == 'p' && buffer[start + 4] == 'e';
 		}
 
 		/// <summary>
@@ -199,7 +271,8 @@ namespace UltraLiteDB
 			while (reader.Position < end)
 			{
 				var bsonType = reader.ReadByte();
-				var name = Encoding.UTF8.GetString(reader.ReadCStringSpan());
+				var nameStart = reader.ReadCStringRange(out var nameLength);
+				var name = Encoding.UTF8.GetString(reader.Buffer, nameStart, nameLength);
 				var val = ReadValueDirect(reader, mapper, bsonType, valueInfo);
 				dict.Add(ConvertKey(dictInfo, name), val);
 			}
@@ -207,8 +280,8 @@ namespace UltraLiteDB
 
 		private static object ConvertKey(DirectReadInfo dictInfo, string name)
 		{
+			if (dictInfo.KeyIsString) return name;
 			var keyType = dictInfo.KeyType!;
-			if (keyType == typeof(string)) return name;
 			return dictInfo.KeyIsEnum ? Enum.Parse(keyType, name) : Convert.ChangeType(name, keyType);
 		}
 
@@ -265,7 +338,9 @@ namespace UltraLiteDB
 					{
 						// length prefix includes the trailing null terminator
 						var strLength = reader.ReadInt32();
-						return info.Enum.Parse(reader.ReadSpan(strLength).Slice(0, strLength - 1));
+						var strStart = reader.Position;
+						reader.Skip(strLength);
+						return info.Enum.Parse(reader.Buffer, strStart, strLength - 1);
 					}
 					var str = reader.ReadBsonString();
 					if (info.Code == TypeCode.String) return str;

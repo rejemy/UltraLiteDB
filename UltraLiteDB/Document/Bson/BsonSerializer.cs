@@ -32,7 +32,8 @@ namespace UltraLiteDB
 
 		/// <summary>
 		/// Serializes a <see cref="BsonDocument"/> to a standard .NET <see cref="Stream"/> in BSON format.
-		/// Writes forward-only, so any writable stream is supported (seekable or not).
+		/// Any writable stream is supported (seekable or not): the document is built in a reusable buffer and
+		/// written with a single <see cref="Stream.Write(byte[], int, int)"/>.
 		/// </summary>
 		/// <param name="doc">The document to serialize.</param>
 		/// <param name="stream">The stream to write the BSON data to.</param>
@@ -40,8 +41,14 @@ namespace UltraLiteDB
 		{
 			if (doc == null) throw new ArgumentNullException(nameof(doc));
 			if (stream == null) throw new ArgumentNullException(nameof(stream));
+			if (!stream.CanWrite) throw new ArgumentException("Stream must be writable.", nameof(stream));
 
-			BsonWriter.WriteDocument(new StreamByteWriter(stream), doc);
+			var writer = DirectBuffers.RentWriter();
+
+			BsonWriter.WriteDocumentDirect(writer, doc);
+			stream.Write(writer.Buffer, 0, writer.Position);
+
+			DirectBuffers.ReturnWriter(writer);
 		}
 
 		/// <summary>
@@ -68,14 +75,20 @@ namespace UltraLiteDB
 
 		/// <summary>
 		/// Deserializes a <see cref="BsonDocument"/> from a standard .NET <see cref="Stream"/>.
-		/// Reads forward-only, so any readable stream is supported (seekable or not).
+		/// Reads forward-only, so any readable stream is supported (seekable or not): exactly one document
+		/// (as sized by its length prefix) is read into a reusable buffer and parsed from memory.
 		/// </summary>
 		/// <param name="stream">The stream to read the BSON document from.</param>
 		public static BsonDocument Deserialize(Stream stream)
 		{
 			if (stream == null) throw new ArgumentNullException(nameof(stream));
+			if (!stream.CanRead) throw new ArgumentException("Stream must be readable.", nameof(stream));
 
-			return BsonReader.ReadDocument(new StreamByteReader(stream));
+			var buffer = DirectBuffers.ReadDocument(stream, out var length);
+			var doc = BsonReader.ReadDocument(new ByteReader(new ArraySegment<byte>(buffer, 0, length)));
+
+			DirectBuffers.ReturnReadBuffer(buffer);
+			return doc;
 		}
 	}
 }

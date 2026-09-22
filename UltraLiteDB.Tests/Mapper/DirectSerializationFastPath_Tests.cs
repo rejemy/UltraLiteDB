@@ -35,6 +35,15 @@ namespace UltraLiteDB.Tests.Mapper
 		public HashSet<int>? IntSet { get; set; }
 	}
 
+	public class ArrayLookalikesModel
+	{
+		public int Id { get; set; }
+		// the CLR reports these as `is int[]`; they must not take the int[] fast path
+		public uint[]? UIntArray { get; set; }
+		public FastPathColor[]? ColorArray { get; set; }
+		public object? BoxedArray { get; set; }
+	}
+
 	public class EnumModel
 	{
 		public int Id { get; set; }
@@ -222,6 +231,24 @@ namespace UltraLiteDB.Tests.Mapper
 			CollectionAssert.AreEqual(new List<long> { 1, 2 }, result.LongList);
 			CollectionAssert.AreEqual(new[] { 1f, 2.5f }, result.FloatArray);
 			CollectionAssert.AreEqual(new List<double> { 1, 2, 0.5 }, result.DoubleList);
+		}
+
+		[TestMethod]
+		public void ArrayLookalikes_NotTreatedAsIntArrays()
+		{
+			var obj = new ArrayLookalikesModel
+			{
+				Id = 1,
+				UIntArray = new uint[] { 1, uint.MaxValue },
+				ColorArray = new[] { FastPathColor.Green, FastPathColor.Blue },
+				BoxedArray = new uint[] { 7 },
+			};
+
+			AssertByteEquivalent(new BsonMapper(), obj);
+
+			var result = RoundTrip(new BsonMapper(), obj);
+			CollectionAssert.AreEqual(obj.UIntArray, result.UIntArray);
+			CollectionAssert.AreEqual(obj.ColorArray, result.ColorArray);
 		}
 
 		private static EnumModel CreateEnums()

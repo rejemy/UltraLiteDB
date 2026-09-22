@@ -25,6 +25,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Unity-only entry point and suites, compiled into the IL2CPP player by run-il2cpp.sh -->
+    <Compile Remove="Unity/**" />
+    <None Include="Unity/**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- keep reflection metadata for the models and the library under NativeAOT trimming -->
     <TrimmerRootAssembly Include="UltraLiteDB.Benchmarks" />
     <TrimmerRootAssembly Include="UltraLiteDB" />
