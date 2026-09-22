@@ -38,9 +38,11 @@ namespace UltraLiteDB.Tests.Mapper
 		[TestMethod]
 		public void Simple_Polymorphics()
 		{
+			var mapper = new BsonMapper().AllowTypes("UltraLiteDB.Tests.Mapper.Descendant*");
+
 			using (var file = new TempFile())
 			{
-				using (var db = new UltraLiteDatabase(file.Filename))
+				using (var db = new UltraLiteDatabase(file.Filename, mapper))
 				{
 					var col = db.GetCollection<MyBase>("col1");
 
@@ -48,7 +50,7 @@ namespace UltraLiteDB.Tests.Mapper
 					col.Insert(new Descendant2() { Id = 2 });
 				}
 
-				using (var db = new UltraLiteDatabase(file.Filename))
+				using (var db = new UltraLiteDatabase(file.Filename, mapper))
 				{
 					var col = db.GetCollection<MyBase>("col1");
 

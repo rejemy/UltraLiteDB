@@ -192,6 +192,36 @@ namespace UltraLiteDB
 		}
 
 		/// <summary>
+		/// Returns true for enumerable types the mapper stores as BSON arrays, so never reads from a document:
+		/// everything enumerable except strings, BSON values and dictionaries (<see cref="IDictionary"/>,
+		/// <c>IDictionary&lt;,&gt;</c>, <c>IReadOnlyDictionary&lt;,&gt;</c>).
+		/// </summary>
+		public static bool IsCollectionType(Type type)
+		{
+			if (!typeof(IEnumerable).IsAssignableFrom(type)) return false;
+			if (type == typeof(string) || typeof(BsonValue).IsAssignableFrom(type) || typeof(IDictionary).IsAssignableFrom(type)) return false;
+
+			if (IsGenericDictionaryInterface(type)) return false;
+
+			foreach (var @interface in type.GetInterfaces())
+			{
+				if (IsGenericDictionaryInterface(@interface)) return false;
+			}
+
+			return true;
+		}
+
+		/// <summary>Returns true if the type is <c>IDictionary&lt;,&gt;</c> or <c>IReadOnlyDictionary&lt;,&gt;</c>.</summary>
+		public static bool IsGenericDictionaryInterface(Type type)
+		{
+			if (!type.GetTypeInfo().IsGenericType) return false;
+
+			var definition = type.GetGenericTypeDefinition();
+
+			return definition == typeof(IDictionary<,>) || definition == typeof(IReadOnlyDictionary<,>);
+		}
+
+		/// <summary>
 		/// Returns the first member matching any of the predicates, evaluated in order of priority.
 		/// Used to resolve ID members by convention (e.g. "Id", "TypeNameId", "_id").
 		/// </summary>

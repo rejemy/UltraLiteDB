@@ -29,7 +29,9 @@ namespace UltraLiteDB.Tests.Mapper
 		[TestMethod]
 		public void Derived_Type()
 		{
-			using (var db = new UltraLiteDatabase(new MemoryStream()))
+			var mapper = new BsonMapper().AllowType<Derived1>().AllowType<Derived2>();
+
+			using (var db = new UltraLiteDatabase(new MemoryStream(), mapper))
 			{
 				var derived1 = new Derived1 { Id = 1, Member1 = "Derived1" };
 				var derived2 = new Derived2 { Id = 2, Member2 = "Dereived2" };

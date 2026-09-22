@@ -44,7 +44,8 @@ namespace UltraLiteDB.Tests.Engine
 		[TestMethod]
 		public void Map_Interfaces()
 		{
-			var mapper = new BsonMapper();
+			// nested types match on their '+'-separated full name
+			var mapper = new BsonMapper().AllowTypes("UltraLiteDB.Tests.Engine.MapperInterface_Tests+*");
 
 			var c1 = new MyClassWithInterface { Id = 1, Impl = new MyClassImpl { Name = "John Doe" } };
 			var c2 = new MyClassWithObject { Id = 1, Impl = new MyClassImpl { Name = "John Doe" } };

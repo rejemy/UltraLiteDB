@@ -529,7 +529,7 @@ namespace UltraLiteDB.Tests.Mapper
 
 			AssertByteEquivalent(new BsonMapper(), obj);
 
-			var result = RoundTrip(new BsonMapper(), obj);
+			var result = RoundTrip(new BsonMapper().AllowType<DerivedChild>(), obj);
 			Assert.IsInstanceOfType(result.Item, typeof(DerivedChild));
 		}
 	}

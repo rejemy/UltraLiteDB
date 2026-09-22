@@ -100,6 +100,27 @@ void DatabaseTest()
 }
 ```
 
+### Polymorphic types
+
+When an object is stored in a member (or collection) whose declared type is a base class, an interface or `object`, `BsonMapper` records its real type in a `_type` field (or a compact `_t` id, see `RegisterTypeId`). Reading that back creates the named type and runs its setters, so a document from an untrusted source (a shared save file, a synced database, JSON from the network) could otherwise name any type in your game. So `_type` only resolves types you allow:
+
+```C#
+var mapper = new BsonMapper();
+
+// every type in a namespace that only holds data types
+mapper.AllowTypes("MyGame.SaveData.*");
+
+// or individual types
+mapper.AllowType<Sword>().AllowType<Shield>();
+
+// types registered with a compact id are allowed too
+mapper.RegisterTypeId(typeof(Potion), "potion");
+
+var db = new UltraLiteDatabase("MyData.db", mapper);
+```
+
+Anything else throws an `UltraLiteException` (`TYPE_NOT_ALLOWED`), as does a type that isn't assignable to the member it's read into (`TYPE_NOT_ASSIGNABLE`). Generic types need their type arguments allowed too. For other rules, set `mapper.AllowTypeFilter`. `AllowTypes("*")` or `AllowTypeFilter = t => true` restores the old unrestricted behavior, which is only safe for data you wrote yourself.
+
 ## Building
 
 To build UltraLiteDB yourself:

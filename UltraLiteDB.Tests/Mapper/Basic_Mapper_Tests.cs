@@ -212,6 +212,7 @@ namespace UltraLiteDB.Tests.Mapper
 			var mapper = new BsonMapper();
 			mapper.UseLowerCaseDelimiter('_');
 			mapper.IncludeFields = true;
+			mapper.AllowType<MyImpl>();
 			return mapper;
 		}
 

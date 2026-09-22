@@ -95,6 +95,8 @@ namespace UltraLiteDB
 
 		/// <summary>
 		/// When <c>true</c>, the serializer includes the assembly-qualified type name (<c>_type</c> field) for derived types to support polymorphic deserialization. Default is <c>true</c>.
+		/// Reading a <c>_type</c> back requires the type to be allowed (<see cref="AllowType(Type)"/>, <see cref="AllowTypes(string)"/>)
+		/// or registered with <see cref="RegisterTypeId"/>.
 		/// </summary>
 		public bool IncludeFullType { get; set; }
 
@@ -113,7 +115,6 @@ namespace UltraLiteDB
 		internal Dictionary<Type, Func<object, BsonValue>> CustomSerializer => _customSerializer;
 		internal Dictionary<Type, Func<BsonValue, object?>> CustomDeserializer => _customDeserializer;
 		internal Dictionary<Type, BsonValue> CustomTypeToId => _customTypeToId;
-		internal Dictionary<BsonValue, Type> CustomIdToType => _customIdToType;
 		internal Func<Type, object> TypeInstantiator => _typeInstantiator;
 
 		/// <summary>
@@ -210,6 +211,7 @@ namespace UltraLiteDB
 		{
 			_customTypeToId.Add(t, id);
 			_customIdToType.Add(id, t);
+			this.AllowRegisteredType(t);
 		}
 
 		/// <summary>

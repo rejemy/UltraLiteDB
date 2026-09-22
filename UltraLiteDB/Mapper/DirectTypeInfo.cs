@@ -170,6 +170,10 @@ namespace UltraLiteDB
 		public readonly DirectEnumInfo? Enum;
 
 		public readonly bool IsGenericDictionary;
+
+		/// <summary>An enumerable, non-dictionary type: only read from BSON arrays (see <see cref="Reflection.IsCollectionType"/>).</summary>
+		public readonly bool IsCollection;
+
 		public readonly Type? KeyType;
 		public readonly Type? ValueType;
 		public readonly bool KeyIsEnum;
@@ -198,8 +202,10 @@ namespace UltraLiteDB
 			this.IsBsonValue = type == typeof(BsonValue) || type == typeof(BsonDocument) || type == typeof(BsonArray);
 			this.Enum = typeInfo.IsEnum ? DirectEnumInfo.Get(type) : null;
 			this.Code = typeInfo.IsEnum ? TypeCode.Object : System.Type.GetTypeCode(type);
+			this.IsCollection = Reflection.IsCollectionType(type);
 
-			if (typeof(IDictionary).IsAssignableFrom(type) && typeInfo.IsGenericType)
+			// the generic interfaces aren't IDictionary, but the instantiator creates a Dictionary<K,V> for them
+			if (typeInfo.IsGenericType && (typeof(IDictionary).IsAssignableFrom(type) || Reflection.IsGenericDictionaryInterface(type)))
 			{
 				var args = typeInfo.GetGenericArguments();
 				this.IsGenericDictionary = true;

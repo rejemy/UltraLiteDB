@@ -53,19 +53,12 @@ namespace UltraLiteDB
 
 					if (nameLength == 2 && buffer[nameStart] == '_' && buffer[nameStart + 1] == 't')
 					{
-						var typeIdValue = ReadBsonValue(reader, bsonType);
-						if (mapper.CustomIdToType.TryGetValue(typeIdValue, out Type mappedType))
-						{
-							resolvedType = mappedType;
-						}
+						resolvedType = mapper.ResolveTypeId(type, ReadBsonValue(reader, bsonType));
 						continue;
 					}
 					else if (IsTypeNameKey(buffer, nameStart, nameLength))
 					{
-						var typeNameValue = ReadBsonValue(reader, bsonType);
-						var resolved = Type.GetType(typeNameValue.AsString);
-						if (resolved == null) throw UltraLiteException.InvalidTypedName(typeNameValue.AsString);
-						resolvedType = resolved;
+						resolvedType = mapper.ResolveTypeName(type, ReadBsonValue(reader, bsonType));
 						continue;
 					}
 				}
@@ -86,6 +79,9 @@ namespace UltraLiteDB
 					{
 						return ReadDictionaryFromPosition(reader, mapper, typeInfo, bsonType, Encoding.UTF8.GetString(buffer, nameStart, nameLength), end);
 					}
+
+					// collections are always stored as arrays: a document would set their own properties (Capacity, ...)
+					if (typeInfo.IsCollection) throw UltraLiteException.CollectionFromDocument(resolvedType);
 
 					obj = mapper.TypeInstantiator(resolvedType);
 					entity = mapper.GetEntityMapper(resolvedType);
@@ -147,6 +143,7 @@ namespace UltraLiteDB
 				{
 					resolvedType = _objectDictionaryType;
 				}
+				if (Reflection.IsCollectionType(resolvedType)) throw UltraLiteException.CollectionFromDocument(resolvedType);
 				obj = mapper.TypeInstantiator(resolvedType);
 			}
 

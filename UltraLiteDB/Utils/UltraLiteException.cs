@@ -35,6 +35,8 @@ namespace UltraLiteDB
 		public const int PROPERTY_NOT_MAPPED = 206;
 		public const int INVALID_TYPED_NAME = 207;
 		public const int DESERIALIZE_MEMBER = 208;
+		public const int TYPE_NOT_ALLOWED = 209;
+		public const int TYPE_NOT_ASSIGNABLE = 210;
 
 
 
@@ -228,6 +230,21 @@ namespace UltraLiteDB
 		internal static UltraLiteException InvalidTypedId(BsonValue typeId)
 		{
 			return new UltraLiteException(INVALID_TYPED_NAME, "Type '{0}' not found in custom type registry.", typeId);
+		}
+
+		internal static UltraLiteException TypeNotAllowed(string typeName, Type declaredType)
+		{
+			return new UltraLiteException(TYPE_NOT_ALLOWED, "Type '{0}' named by _type is not allowed (reading into '{1}'). Allow it with BsonMapper.AllowType, AllowTypes(\"Namespace.*\") or RegisterTypeId.", typeName, declaredType.FullName ?? declaredType.Name);
+		}
+
+		internal static UltraLiteException TypeNotAssignable(Type type, Type declaredType)
+		{
+			return new UltraLiteException(TYPE_NOT_ASSIGNABLE, "Type '{0}' named by the document's type discriminator is not assignable to '{1}'.", type.FullName ?? type.Name, declaredType.FullName ?? declaredType.Name);
+		}
+
+		internal static UltraLiteException CollectionFromDocument(Type type)
+		{
+			return new UltraLiteException(INVALID_DATA_TYPE, "Cannot read a document into collection type '{0}': collections are stored as BSON arrays.", type.FullName ?? type.Name);
 		}
 
 		internal static UltraLiteException DeserializeMember(string member, Type entityType, Exception inner)

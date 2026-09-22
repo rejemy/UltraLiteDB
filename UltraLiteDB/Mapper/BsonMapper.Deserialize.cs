@@ -160,17 +160,12 @@ namespace UltraLiteDB
 				// test if value is object and has _t
 				if (doc.RawValue.TryGetValue("_t", out typeField))
 				{
-					if (!_customIdToType.TryGetValue(typeField, out type))
-					{
-						throw UltraLiteException.InvalidTypedId(typeField);
-					}
+					type = this.ResolveTypeId(type, typeField);
 				}
 				// test if value is object and has _type
 				else if (doc.RawValue.TryGetValue("_type", out typeField))
 				{
-					type = Type.GetType(typeField.AsString);
-
-					if (type == null) throw UltraLiteException.InvalidTypedName(typeField.AsString);
+					type = this.ResolveTypeName(type, typeField);
 				}
 
 				// when complex type has no definition (== typeof(object)) use Dictionary<string, object> to better set values
@@ -178,6 +173,9 @@ namespace UltraLiteDB
 				{
 					type = typeof(Dictionary<string, object>);
 				}
+
+				// collections are always stored as arrays: a document would set their own properties (Capacity, ...)
+				if (Reflection.IsCollectionType(type)) throw UltraLiteException.CollectionFromDocument(type);
 
 				var o = _typeInstantiator(type);
 
