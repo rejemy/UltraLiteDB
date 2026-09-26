@@ -121,8 +121,8 @@ namespace UltraLiteDB
 				return unchecked((UInt64)((Int64)value.RawValue));
 			}
 
-			// enum value is an int
-			else if (type.GetTypeInfo().IsEnum)
+			// enum value is its member name, unless the enum has a custom deserializer (checked below)
+			else if (type.GetTypeInfo().IsEnum && !_customDeserializer.ContainsKey(type))
 			{
 				return Enum.Parse(type, value.AsString);
 			}

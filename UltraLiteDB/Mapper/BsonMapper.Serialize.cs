@@ -108,7 +108,8 @@ namespace UltraLiteDB
 			{
 				return new BsonValue(Convert.ToDouble(obj));
 			}
-			else if (obj is Char || obj is Enum)
+			// an enum is its member name, unless the enum has a custom serializer (checked below)
+			else if (obj is Char || (obj is Enum && !_customSerializer.ContainsKey(type) && !_customSerializer.ContainsKey(obj.GetType())))
 			{
 				return new BsonValue(obj.ToString());
 			}

@@ -127,7 +127,7 @@ namespace UltraLiteDB
 			else if (rt == typeof(UInt64)) kind = DirectKind.UInt64;
 			else if (rt == typeof(Single)) kind = DirectKind.Single;
 			else if (rt == typeof(Char)) kind = DirectKind.Char;
-			else if (rt.GetTypeInfo().IsEnum)
+			else if (rt.GetTypeInfo().IsEnum && !mapper.CustomSerializer.ContainsKey(declaredType) && !mapper.CustomSerializer.ContainsKey(rt))
 			{
 				return new DirectWriteInfo(declaredType, rt, version, DirectKind.Enum, enumInfo: DirectEnumInfo.Get(rt));
 			}
